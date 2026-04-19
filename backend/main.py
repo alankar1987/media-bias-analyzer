@@ -164,10 +164,14 @@ async def analyze(req: AnalyzeRequest):
                 article_text = f"{title}\n\n{extracted}".strip() if title else extracted
             logger.info("Extracted %d chars from %s", len(extracted), source_url)
         except httpx.HTTPStatusError as exc:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Failed to fetch URL (HTTP {exc.response.status_code}): {source_url}",
-            )
+            status = exc.response.status_code
+            if status == 403:
+                detail = "This site is blocking access to its content. Please copy and paste the article text directly into the text box below."
+            elif status == 401:
+                detail = "This article requires a login. Please copy and paste the article text directly into the text box below."
+            else:
+                detail = f"Could not fetch the article (HTTP {status}). Please copy and paste the article text directly into the text box below."
+            raise HTTPException(status_code=422, detail=detail)
         except httpx.RequestError as exc:
             raise HTTPException(
                 status_code=422,
