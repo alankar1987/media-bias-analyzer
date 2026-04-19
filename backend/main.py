@@ -1,0 +1,241 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+from typing import Optional
+
+import httpx
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, model_validator
+from dotenv import load_dotenv
+
+from analyzer import extract_text_from_url, analyze_content
+
+load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+MIN_TEXT_LENGTH = 50
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Media Bias Analyzer — startup")
+    yield
+    logger.info("Media Bias Analyzer — shutdown")
+
+
+app = FastAPI(
+    title="Media Bias Analyzer",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+
+# ---------------------------------------------------------------------------
+# Request / Response models
+# ---------------------------------------------------------------------------
+
+class AnalyzeRequest(BaseModel):
+    url: Optional[str] = None
+    text: Optional[str] = None
+
+    @model_validator(mode="after")
+    def at_least_one_field(self):
+        url = (self.url or "").strip()
+        text = (self.text or "").strip()
+        if not url and not text:
+            raise ValueError("Provide at least one of 'url' or 'text'.")
+        # Normalise empties to None so downstream code can use simple truthiness
+        self.url = url or None
+        self.text = text or None
+        return self
+
+
+class AnalyzeResponse(BaseModel):
+    success: bool
+    data: Optional[dict] = None
+    error: Optional[str] = None
+    source_url: Optional[str] = None
+    text_preview: Optional[str] = None
+
+
+class CompareRequest(BaseModel):
+    article1: AnalyzeRequest
+    article2: AnalyzeRequest
+
+
+class CompareResponse(BaseModel):
+    success: bool
+    article1: Optional[AnalyzeResponse] = None
+    article2: Optional[AnalyzeResponse] = None
+    error: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+async def _process_single(req: AnalyzeRequest) -> AnalyzeResponse:
+    """Extract and analyse one article.  Never raises — errors go in the response."""
+    article_text = req.text
+    source_url = req.url
+
+    if source_url:
+        try:
+            title, extracted = await extract_text_from_url(source_url)
+            if not article_text:
+                article_text = f"{title}\n\n{extracted}".strip() if title else extracted
+            logger.info("Extracted %d chars from %s", len(extracted), source_url)
+        except ValueError as exc:
+            return AnalyzeResponse(success=False, error=str(exc), source_url=source_url)
+        except Exception as exc:
+            return AnalyzeResponse(
+                success=False,
+                error=f"Could not extract content from URL: {exc}",
+                source_url=source_url,
+            )
+
+    if not article_text or len(article_text.strip()) < MIN_TEXT_LENGTH:
+        return AnalyzeResponse(
+            success=False,
+            error=f"Article text must be at least {MIN_TEXT_LENGTH} characters.",
+            source_url=source_url,
+        )
+
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, analyze_content, article_text, source_url)
+    except (ValueError, RuntimeError) as exc:
+        return AnalyzeResponse(success=False, error=str(exc), source_url=source_url)
+    except Exception as exc:
+        logger.error("Unexpected analysis error: %s", exc, exc_info=True)
+        return AnalyzeResponse(
+            success=False,
+            error="Analysis failed. Please try again.",
+            source_url=source_url,
+        )
+
+    preview_len = 300
+    preview = (
+        article_text[:preview_len] + "…"
+        if len(article_text) > preview_len
+        else article_text
+    )
+    return AnalyzeResponse(
+        success=True,
+        data=result,
+        source_url=source_url,
+        text_preview=preview,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+@app.get("/health", tags=["ops"])
+async def health():
+    return {"status": "ok"}
+
+
+@app.post("/analyze", response_model=AnalyzeResponse, tags=["analysis"])
+async def analyze(req: AnalyzeRequest):
+    article_text = req.text
+    source_url = req.url
+
+    # ── 1. Fetch & extract text from URL ────────────────────────────────────
+    if source_url:
+        try:
+            title, extracted = await extract_text_from_url(source_url)
+            if not article_text:
+                article_text = f"{title}\n\n{extracted}".strip() if title else extracted
+            logger.info("Extracted %d chars from %s", len(extracted), source_url)
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Failed to fetch URL (HTTP {exc.response.status_code}): {source_url}",
+            )
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Could not reach URL — {exc}",
+            )
+        except ValueError as exc:
+            # Raised when both httpx and newspaper3k fail — message is user-friendly
+            raise HTTPException(status_code=422, detail=str(exc))
+        except Exception as exc:
+            logger.warning("URL extraction error: %s", exc)
+            raise HTTPException(
+                status_code=422,
+                detail=f"Could not extract content from URL: {exc}",
+            )
+
+    # ── 2. Guard: require minimum meaningful content ────────────────────────
+    if not article_text or len(article_text.strip()) < MIN_TEXT_LENGTH:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Article text must be at least {MIN_TEXT_LENGTH} characters.",
+        )
+
+    # ── 3. Analyse ──────────────────────────────────────────────────────────
+    try:
+        result = analyze_content(article_text, url=source_url)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception as exc:
+        logger.error("Unexpected analysis error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
+
+    preview_len = 300
+    preview = (
+        article_text[:preview_len] + "…"
+        if len(article_text) > preview_len
+        else article_text
+    )
+
+    return AnalyzeResponse(
+        success=True,
+        data=result,
+        source_url=source_url,
+        text_preview=preview,
+    )
+
+
+@app.post("/compare", response_model=CompareResponse, tags=["analysis"])
+async def compare(req: CompareRequest):
+    """Analyse two articles in parallel and return both results side by side."""
+    r1, r2 = await asyncio.gather(
+        _process_single(req.article1),
+        _process_single(req.article2),
+    )
+    return CompareResponse(
+        success=r1.success and r2.success,
+        article1=r1,
+        article2=r2,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Global error handler
+# ---------------------------------------------------------------------------
+
+@app.exception_handler(Exception)
+async def _global_handler(request: Request, exc: Exception):
+    logger.error("Unhandled error on %s %s: %s", request.method, request.url, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "error": "Internal server error"},
+    )

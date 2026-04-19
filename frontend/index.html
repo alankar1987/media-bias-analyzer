@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SignalFrame — Media Bias Analyzer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Background ───────────────────────────────────────────────── -->
+    <div class="bg-layer" aria-hidden="true">
+      <div class="orb orb-cyan"></div>
+      <div class="orb orb-purple"></div>
+      <div class="orb orb-green"></div>
+      <div class="grid-overlay"></div>
+    </div>
+
+    <div class="container">
+
+      <!-- ── Header ─────────────────────────────────────────────────── -->
+      <header class="site-header">
+        <div class="logo">
+          <div class="logo-icon-wrap">
+            <div class="logo-icon-inner"></div>
+          </div>
+          <span class="logo-text">SignalFrame</span>
+        </div>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="mode-single">Single Article</button>
+          <button class="mode-btn" id="mode-compare">Compare Two</button>
+        </div>
+      </header>
+
+      <!-- ── Hero ───────────────────────────────────────────────────── -->
+      <section class="hero">
+
+        <!-- Left: copy -->
+        <div class="hero-copy">
+          <div class="hero-tag">
+            <span class="tag-dot"></span>
+            Evidence-backed media analysis
+          </div>
+          <h1 class="hero-headline">Read the framing,<br/>not just the headline.</h1>
+          <p class="hero-sub">Paste any article or URL and inspect sentiment, political lean, factual reliability, and the exact language patterns driving each result.</p>
+
+          <div class="feature-pills">
+            <div class="pill pill-cyan">
+              <div class="pill-label">Traceable scoring</div>
+              <div class="pill-value cyan">Quotes &amp; rationale</div>
+            </div>
+            <div class="pill pill-purple">
+              <div class="pill-label">Comparison</div>
+              <div class="pill-value purple">Side-by-side framing</div>
+            </div>
+            <div class="pill pill-green">
+              <div class="pill-label">Fact-check</div>
+              <div class="pill-value green">Claim-level review</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column: wraps both input cards so they stay in the hero grid -->
+        <div class="input-col-wrap">
+
+          <!-- Single article card -->
+          <div class="glass-card input-card" id="single-input-card">
+            <p class="section-label">Single article analysis</p>
+            <div class="form-body">
+              <input
+                id="url-input"
+                type="url"
+                class="text-input"
+                placeholder="https://example.com/article"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <div class="or-row"><span>or paste article text</span></div>
+              <textarea
+                id="text-input"
+                class="text-area"
+                rows="6"
+                placeholder="Paste the full article text here…"
+              ></textarea>
+            </div>
+            <button id="analyze-btn" class="analyze-btn">
+              <span class="btn-label">Analyze Article</span>
+              <span class="btn-spinner" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <!-- Compare two articles card — hidden by default -->
+          <div class="glass-card input-card hidden" id="compare-input-card">
+            <p class="section-label">Two-article comparison</p>
+            <div class="compare-inputs-grid">
+
+              <div class="compare-input-col">
+                <p class="compare-ab-label">Article A</p>
+                <input id="source-name-1" type="text" class="text-input" placeholder="Source name" autocomplete="off" spellcheck="false" />
+                <input id="url-input-1" type="url" class="text-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
+                <textarea id="text-input-1" class="text-area cmp-textarea" rows="7" placeholder="…or paste text"></textarea>
+              </div>
+
+              <div class="compare-input-col">
+                <p class="compare-ab-label">Article B</p>
+                <input id="source-name-2" type="text" class="text-input" placeholder="Source name" autocomplete="off" spellcheck="false" />
+                <input id="url-input-2" type="url" class="text-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
+                <textarea id="text-input-2" class="text-area cmp-textarea" rows="7" placeholder="…or paste text"></textarea>
+              </div>
+
+            </div>
+            <button id="compare-btn" class="analyze-btn">
+              <span class="btn-label">Compare Articles</span>
+              <span class="btn-spinner" aria-hidden="true"></span>
+            </button>
+          </div>
+
+        </div><!-- /input-col-wrap -->
+
+      </section>
+
+      <!-- ── Error ───────────────────────────────────────────────────── -->
+      <div id="error-banner" class="error-banner hidden" role="alert">
+        <span>⚠</span>
+        <span id="error-text"></span>
+      </div>
+
+      <!-- ── Results ────────────────────────────────────────────────── -->
+      <section id="results" class="results hidden">
+
+        <!-- Summary card -->
+        <div class="glass-card result-summary-card" id="summary-card">
+          <p class="section-label">Article analysis</p>
+          <div class="summary-badges" id="summary-badges"></div>
+          <div class="summary-block" id="summary-block"></div>
+        </div>
+
+        <!-- Political Lean accordion -->
+        <div class="accordion glass-card-sm" id="acc-political" data-open="true">
+          <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
+            <div class="accordion-title-row">
+              <span class="accordion-title">Political Lean</span>
+              <span class="acc-badge" id="political-badge"></span>
+            </div>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="accordion-body" id="body-political">
+            <!-- spectrum -->
+            <div class="spectrum-wrap">
+              <div class="spectrum-bar">
+                <div class="spectrum-track"></div>
+                <div class="spectrum-dot" id="spectrum-dot"></div>
+              </div>
+              <div class="spectrum-labels">
+                <span>Left</span><span>Center</span><span>Right</span>
+              </div>
+            </div>
+            <p class="conf-line" id="political-conf"></p>
+            <p class="body-text" id="political-explanation"></p>
+
+            <!-- framing choices -->
+            <div class="subsection" id="framing-section">
+              <p class="subsection-label">Framing choices</p>
+              <div class="quote-list" id="quote-list"></div>
+            </div>
+
+            <!-- source selection -->
+            <div class="subsection" id="sources-section">
+              <p class="subsection-label">Source selection</p>
+              <p class="body-text" id="source-summary"></p>
+              <div class="source-tags" id="source-tags"></div>
+            </div>
+
+            <!-- notable omissions -->
+            <div class="subsection" id="omissions-section">
+              <p class="subsection-label">Notable omissions</p>
+              <div class="omission-list" id="omission-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sentiment accordion -->
+        <div class="accordion glass-card-sm" id="acc-sentiment" data-open="false">
+          <div class="accordion-header" role="button" tabindex="0" aria-expanded="false">
+            <div class="accordion-title-row">
+              <span class="accordion-title">Sentiment</span>
+              <span class="acc-badge" id="sentiment-badge"></span>
+            </div>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="accordion-body hidden" id="body-sentiment">
+            <!-- gauge -->
+            <div class="gauge-wrap">
+              <div class="gauge-track">
+                <div class="gauge-fill" id="gauge-fill"></div>
+              </div>
+              <div class="gauge-labels">
+                <span>Very Negative</span><span>Neutral</span><span>Very Positive</span>
+              </div>
+            </div>
+            <p class="body-text" id="sentiment-explanation"></p>
+          </div>
+        </div>
+
+        <!-- Fact Check accordion -->
+        <div class="accordion glass-card-sm" id="acc-fact" data-open="true">
+          <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
+            <div class="accordion-title-row">
+              <span class="accordion-title">Fact Check</span>
+              <span class="acc-badge acc-badge-green" id="fact-badge"></span>
+            </div>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="accordion-body" id="body-fact">
+            <p class="body-text" id="fact-summary"></p>
+            <div class="claim-list" id="claim-list"></div>
+          </div>
+        </div>
+
+        <!-- Broaden Your View -->
+        <div class="broaden-section" id="broaden-section">
+          <p class="broaden-heading">Broaden Your View</p>
+          <p class="broaden-sub">Explore how other outlets frame this story differently.</p>
+          <div class="broaden-grid" id="broaden-grid"></div>
+        </div>
+
+        <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
+
+      </section>
+
+      <!-- ── Compare Results ────────────────────────────────────────────── -->
+      <section id="compare-results" class="compare-results hidden">
+        <div class="compare-columns" id="compare-columns"></div>
+        <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
+      </section>
+
+    </div><!-- /container -->
+  </div><!-- /app -->
+
+  <script src="script.js"></script>
+</body>
+</html>
