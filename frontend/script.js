@@ -2,7 +2,7 @@
    SignalFrame — Media Bias Analyzer  |  script.js
    ============================================================ */
 
-const API_BASE = "https://REPLACE_WITH_YOUR_RAILWAY_URL";
+const API_BASE = "https://media-bias-analyzer-production.up.railway.app";
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const urlInput       = document.getElementById("url-input");
