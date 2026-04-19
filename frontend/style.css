@@ -684,6 +684,23 @@ body {
   text-decoration: underline;
 }
 
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.site-footer {
+  text-align: center;
+  padding: 24px;
+  font-size: 13px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+}
+.site-footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.site-footer a:hover {
+  color: var(--cyan);
+}
+
 /* ── Disclaimer ────────────────────────────────────────────────────────── */
 .disclaimer {
   text-align: center;

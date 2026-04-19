@@ -83,6 +83,19 @@ async def extract_text_from_url(url: str) -> Tuple[str, str]:
     lines = [ln.strip() for ln in raw.splitlines() if len(ln.strip()) > 30]
     cleaned = "\n".join(lines[:300])
 
+    _PAYWALL_SIGNALS = [
+        "subscribe to read", "subscription required", "subscribers only",
+        "sign in to read", "create an account to read", "premium content",
+        "to continue reading", "continue reading with", "unlock this article",
+        "already a subscriber", "get full access", "read the full story",
+    ]
+    page_text_lower = response.text.lower()
+    if any(signal in page_text_lower for signal in _PAYWALL_SIGNALS) or len(cleaned) < 200:
+        raise ValueError(
+            "This article appears to be behind a paywall. "
+            "Please copy and paste the article text directly into the text box below."
+        )
+
     return title, cleaned
 
 
