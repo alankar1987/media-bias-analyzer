@@ -1,5 +1,5 @@
 /* ============================================================
-   SignalFrame — Media Bias Analyzer  |  script.js
+   Veris — Media Bias Analyzer  |  script.js
    ============================================================ */
 
 const API_BASE = "https://media-bias-analyzer-production.up.railway.app";
@@ -281,7 +281,9 @@ function renderBroadenSection(items) {
   }
 
   section.classList.remove("hidden");
-  grid.innerHTML = items.map(item => `
+  grid.innerHTML = items.map(item => {
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.outlet + " " + item.angle)}`;
+    return `
     <div class="broaden-card">
       <div class="broaden-card-top">
         <span class="broaden-outlet">${escapeHtml(item.outlet)}</span>
@@ -291,8 +293,9 @@ function renderBroadenSection(items) {
       </div>
       <p class="broaden-angle">${escapeHtml(item.angle)}</p>
       <p class="broaden-why">${escapeHtml(item.why)}</p>
+      <a class="broaden-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">Search on Google →</a>
     </div>
-  `).join("");
+  `}).join("");
 }
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
