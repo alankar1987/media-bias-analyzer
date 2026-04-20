@@ -193,6 +193,23 @@ Break-even: ~65 paid subscribers covers Railway + Supabase free tier + Stripe fe
 
 ---
 
+## Account Deletion (GDPR/CCPA)
+
+Self-serve "Delete my account" button in account settings (no admin dashboard needed).
+
+**Flow:**
+1. User clicks "Delete my account" → confirmation modal ("This will permanently delete your history and cancel your subscription.")
+2. Frontend calls `DELETE /auth/account` with JWT
+3. Backend:
+   - Cancels active Stripe subscription (if any) via `stripe.subscriptions.cancel`
+   - Calls Supabase Admin API to delete the `auth.users` row
+   - Cascade wipes `analyses` and `subscriptions` rows automatically
+4. Frontend clears session, redirects to home
+
+**Error handling:** If Stripe cancel fails, still delete the Supabase user (don't hold data hostage). Log the Stripe failure for manual follow-up.
+
+---
+
 ## Out of Scope (this phase)
 
 - Annual pricing
