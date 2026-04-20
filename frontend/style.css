@@ -734,7 +734,6 @@ body {
   margin-bottom: 2px;
 }
 /* tighter spacing for compare fields */
-.cmp-url  { }
 .cmp-textarea { flex: 1; }
 
 /* ── Compare results ────────────────────────────────────────────────────── */
@@ -789,6 +788,23 @@ body {
 @media (max-width: 560px) {
   .hero-headline { font-size: 30px; }
   .feature-pills { flex-direction: column; }
-  .mode-toggle { display: none; }
   .glass-card, .glass-card-sm { border-radius: 16px; }
+
+  /* Stack header vertically so toggle stays visible */
+  .site-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding-bottom: 20px;
+  }
+  .mode-toggle {
+    width: 100%;
+    gap: 8px;
+  }
+  .mode-btn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 10px;
+    font-size: 12px;
+  }
 }

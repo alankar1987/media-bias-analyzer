@@ -2,7 +2,10 @@ venv/
 backend/venv/
 .env
 backend/.env
+backend/.envcd
 __pycache__/
 backend/__pycache__/
 *.pyc
 .DS_Store
+.claude/settings.local.json
+.superpowers/
