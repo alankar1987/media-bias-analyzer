@@ -184,8 +184,9 @@ async def history(
         user = verify_jwt(token)
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    rows = get_history(user_id=user["id"], offset=offset, limit=min(limit, 50))
-    return {"items": rows, "offset": offset, "limit": limit}
+    clamped = min(limit, 50)
+    rows = get_history(user_id=user["id"], offset=offset, limit=clamped)
+    return {"items": rows, "offset": offset, "limit": clamped}
 
 
 @app.get("/auth/history/{analysis_id}", tags=["auth"])
