@@ -234,6 +234,30 @@
         <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
       </section>
 
+    <!-- History view -->
+    <section id="history-view" hidden>
+      <div class="history-header">
+        <h2>My History</h2>
+        <button class="history-back-btn" onclick="hideHistoryView()">← Back</button>
+      </div>
+
+      <!-- Stats row -->
+      <div class="history-stats" id="history-stats"></div>
+
+      <!-- Card grid -->
+      <div class="history-grid" id="history-grid"></div>
+
+      <div style="text-align:center;margin-top:24px">
+        <button class="load-more-btn" id="history-load-more" hidden>Load more</button>
+      </div>
+
+      <!-- Expanded analysis drawer -->
+      <div class="history-drawer glass-card" id="history-drawer" hidden>
+        <button class="drawer-close" onclick="document.getElementById('history-drawer').hidden=true">✕ Close</button>
+        <div id="history-drawer-content"></div>
+      </div>
+    </section>
+
     <!-- Upgrade modal -->
     <div class="modal-overlay" id="upgrade-modal" hidden>
       <div class="modal-box glass-card">
