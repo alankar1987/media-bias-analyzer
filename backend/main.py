@@ -42,7 +42,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://veris.news",
+        "https://media-bias-analyzer.naik-alankar.workers.dev",
+        "http://localhost:8787",
+    ],
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
