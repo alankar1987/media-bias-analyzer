@@ -87,11 +87,29 @@ async function analyzeArticle() {
     if (url)  body.url  = url;
     if (text) body.text = text;
 
+    const token = typeof getToken === 'function' ? getToken() : null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/analyze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers,
       body: JSON.stringify(body),
     });
+
+    if (res.status === 402) {
+      showUpgradeModal();
+      return;
+    }
+    if (res.status === 429) {
+      const body429 = await res.json();
+      if (body429.error === 'anon_limit') {
+        showAnonLimitMessage();
+      } else {
+        showError('Too many requests. Please try again later.');
+      }
+      return;
+    }
 
     const payload = await res.json();
 
@@ -368,14 +386,25 @@ async function compareArticles() {
   compareResults.classList.add("hidden");
 
   try {
+    const token = typeof getToken === 'function' ? getToken() : null;
+    const compareHeaders = { 'Content-Type': 'application/json' };
+    if (token) compareHeaders['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/compare`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: compareHeaders,
       body: JSON.stringify({
         article1: { url: url1 || null, text: text1 || null },
         article2: { url: url2 || null, text: text2 || null },
       }),
     });
+
+    if (res.status === 402) { showUpgradeModal(); return; }
+    if (res.status === 429) {
+      const b = await res.json();
+      showError(b.error === 'anon_limit' ? 'Sign up free for 3 analyses/month.' : 'Too many requests. Try again later.');
+      return;
+    }
 
     const payload = await res.json();
 
@@ -515,6 +544,65 @@ function buildCompareCol(data, n, label) {
       </div>
     </div>
   `;
+}
+
+// ── Auth helpers ──────────────────────────────────────────────────────────────
+function showUpgradeModal() {
+  document.getElementById('upgrade-modal').hidden = false;
+  document.getElementById('upgrade-btn').onclick = async () => {
+    const token = typeof getToken === 'function' ? getToken() : null;
+    if (!token) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+    try {
+      const r = await fetch(`${API_BASE}/stripe/checkout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const { url } = await r.json();
+      window.location.href = url;
+    } catch {
+      showError('Could not start checkout. Please try again.');
+    }
+  };
+}
+
+function showAnonLimitMessage() {
+  errorText.innerHTML = `You've used your free try. <button onclick="if(typeof signInWithGoogle==='function')signInWithGoogle()" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:inherit;text-decoration:underline">Sign up free</button> for 3 analyses/month.`;
+  errorBanner.classList.remove('hidden');
+  resultsSection.classList.add('hidden');
+}
+
+function showAccountSettings() {
+  document.getElementById('account-modal').hidden = false;
+  const dropdown = document.getElementById('auth-dropdown');
+  if (dropdown) dropdown.setAttribute('hidden', '');
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (token) {
+    fetch(`${API_BASE}/auth/usage`, { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('account-usage-info').textContent =
+          `${data.analyses_this_month} / ${data.limit} analyses used this month (${data.tier} plan)`;
+      })
+      .catch(() => {});
+  }
+  document.getElementById('delete-account-btn').onclick = confirmDeleteAccount;
+}
+
+async function confirmDeleteAccount() {
+  if (!confirm('This will permanently delete your account and all saved analyses. This cannot be undone.')) return;
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE}/auth/account`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    document.getElementById('account-modal').hidden = true;
+    if (typeof authSignOut === 'function') await authSignOut();
+    if (typeof showToast === 'function') showToast('Your account has been deleted.', 'info');
+  } catch {
+    showError('Could not delete account. Please try again.');
+  }
 }
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
