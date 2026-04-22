@@ -16,6 +16,7 @@ httpx==0.28.1
 idna==3.11
 jiter==0.14.0
 lxml==6.0.4
+trafilatura
 pydantic==2.13.0
 pydantic_core==2.46.0
 python-dotenv==1.2.1

@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 
 import httpx
 from bs4 import BeautifulSoup
+import trafilatura
 import anthropic
 from dotenv import load_dotenv
 
@@ -90,11 +91,30 @@ async def extract_text_from_url(url: str) -> Tuple[str, str]:
         "already a subscriber", "get full access", "read the full story",
     ]
     page_text_lower = response.text.lower()
-    if any(signal in page_text_lower for signal in _PAYWALL_SIGNALS) or len(cleaned) < 200:
+    if any(signal in page_text_lower for signal in _PAYWALL_SIGNALS):
         raise ValueError(
             "This article appears to be behind a paywall. "
             "Please copy and paste the article text directly into the text box below."
         )
+
+    if len(cleaned) < 200:
+        # Try trafilatura on the already-fetched HTML (no extra network call)
+        extracted = trafilatura.extract(response.text, include_comments=False, include_tables=False)
+        if extracted and len(extracted.strip()) >= 200:
+            cleaned = extracted.strip()
+        else:
+            # Last resort: Jina AI reader (extra network call, ~2-5s)
+            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), follow_redirects=True) as jina_client:
+                jina_resp = await jina_client.get(f"https://r.jina.ai/{url}", headers={"Accept": "text/plain"})
+                jina_text = jina_resp.text.strip()
+            if len(jina_text) >= 200:
+                cleaned = jina_text
+            else:
+                raise ValueError(
+                    "Couldn't extract enough article text from this page — it may use "
+                    "JavaScript rendering or have an unusual layout. "
+                    "Please copy and paste the article text directly into the text box below."
+                )
 
     return title, cleaned
 
