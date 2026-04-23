@@ -50,7 +50,13 @@ function clearError() {
 function setLoading(on) {
   analyzeBtn.classList.toggle("loading", on);
   analyzeBtn.disabled = on;
-  analyzeBtn.querySelector(".btn-label").textContent = on ? "Analyzing…" : "Analyze Article";
+  const label = analyzeBtn.querySelector(".btn-label");
+  if (!label) return;
+  if (on) {
+    label.textContent = _activeMode === 'compare' ? "Comparing…" : "Analyzing…";
+  } else {
+    label.textContent = _activeMode === 'compare' ? "Compare Articles" : "Analyze Article";
+  }
 }
 
 // ── Accordion ─────────────────────────────────────────────────────────────────
@@ -349,43 +355,38 @@ function factBadgeColor(score) {
   return "#ef4444";
 }
 
-// ── Mode toggle (legacy — replaced by tab-row in Task 4) ─────────────────────
-const singleInputCard  = document.getElementById("single-input-card");
-const compareInputCard = document.getElementById("compare-input-card");
-const compareResults   = document.getElementById("compare-results");
+// ── Tab switching (Single / Compare) ──────────────────────────────────────────
+const compareResults = document.getElementById("compare-results");
+let _activeMode = 'single';
 
-const modeSingleBtn  = document.getElementById("mode-single");
-const modeCompareBtn = document.getElementById("mode-compare");
-
-if (modeSingleBtn) {
-  modeSingleBtn.addEventListener("click", function () {
-    this.classList.add("active");
-    if (modeCompareBtn) modeCompareBtn.classList.remove("active");
-    if (singleInputCard) singleInputCard.classList.remove("hidden");
-    if (compareInputCard) compareInputCard.classList.add("hidden");
-    if (compareResults) compareResults.classList.add("hidden");
-    clearError();
-  });
+function setTab(mode) {
+  _activeMode = mode;
+  const isSingle = mode === 'single';
+  const tabSingleEl  = document.getElementById('tab-single');
+  const tabCompareEl = document.getElementById('tab-compare');
+  const singleEl  = document.getElementById('single-inputs');
+  const compareEl = document.getElementById('compare-inputs');
+  if (tabSingleEl)  tabSingleEl.classList.toggle('active', isSingle);
+  if (tabCompareEl) tabCompareEl.classList.toggle('active', !isSingle);
+  if (singleEl)  singleEl.classList.toggle('hidden', !isSingle);
+  if (compareEl) compareEl.classList.toggle('hidden', isSingle);
+  const label = analyzeBtn.querySelector('.btn-label');
+  if (label) label.textContent = isSingle ? 'Analyze Article' : 'Compare Articles';
+  if (compareResults) compareResults.classList.add('hidden');
+  resultsSection.classList.add('hidden');
+  clearError();
 }
 
-if (modeCompareBtn) {
-  modeCompareBtn.addEventListener("click", function () {
-    this.classList.add("active");
-    if (modeSingleBtn) modeSingleBtn.classList.remove("active");
-    if (compareInputCard) compareInputCard.classList.remove("hidden");
-    if (singleInputCard) singleInputCard.classList.add("hidden");
-    resultsSection.classList.add("hidden");
-    clearError();
-  });
-}
+document.addEventListener('DOMContentLoaded', () => {
+  const tabSingleEl  = document.getElementById('tab-single');
+  const tabCompareEl = document.getElementById('tab-compare');
+  if (tabSingleEl)  tabSingleEl.addEventListener('click',  () => setTab('single'));
+  if (tabCompareEl) tabCompareEl.addEventListener('click', () => setTab('compare'));
+});
 
 // ── Compare ───────────────────────────────────────────────────────────────────
-const compareBtn = document.getElementById("compare-btn");
-
 function setCompareLoading(on) {
-  compareBtn.classList.toggle("loading", on);
-  compareBtn.disabled = on;
-  compareBtn.querySelector(".btn-label").textContent = on ? "Comparing…" : "Compare Articles";
+  setLoading(on);
 }
 
 async function compareArticles() {
@@ -444,8 +445,6 @@ async function compareArticles() {
     setCompareLoading(false);
   }
 }
-
-compareBtn.addEventListener("click", compareArticles);
 
 // ── Compare render ────────────────────────────────────────────────────────────
 function renderCompareResults(d1, d2, label1 = "Article A", label2 = "Article B") {
@@ -612,7 +611,13 @@ async function confirmDeleteAccount() {
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 urlInput.addEventListener("keydown",  e => { if (e.key === "Enter") analyzeArticle(); });
 textInput.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyzeArticle(); });
-analyzeBtn.addEventListener("click", analyzeArticle);
+analyzeBtn.addEventListener("click", () => {
+  if (_activeMode === 'compare') {
+    compareArticles();
+  } else {
+    analyzeArticle();
+  }
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initAccordions();

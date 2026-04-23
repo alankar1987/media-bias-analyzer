@@ -87,22 +87,25 @@
           </div>
         </div>
 
-        <!-- Right: input card wrapper (content rebuilt in Task 4) -->
         <div class="input-col">
+          <div class="input-card" id="input-card-root">
+            <div class="card-label">Analyze an article</div>
+            <div class="tab-row">
+              <button class="tab active" id="tab-single">Single Article</button>
+              <button class="tab" id="tab-compare">Compare Two</button>
+            </div>
 
-          <!-- Single article card -->
-          <div class="glass-card input-card" id="single-input-card">
-            <p class="section-label">Single article analysis</p>
-            <div class="form-body">
+            <!-- Single mode -->
+            <div id="single-inputs">
               <input
                 id="url-input"
                 type="url"
-                class="text-input"
-                placeholder="https://example.com/article"
+                class="url-input"
+                placeholder="https://example.com/article-url"
                 autocomplete="off"
                 spellcheck="false"
               />
-              <div class="or-row"><span>or paste article text</span></div>
+              <div class="or-divider">or paste text</div>
               <textarea
                 id="text-input"
                 class="text-area"
@@ -110,34 +113,26 @@
                 placeholder="Paste the full article text here…"
               ></textarea>
             </div>
+
+            <!-- Compare mode (hidden by default) -->
+            <div id="compare-inputs" class="compare-grid hidden">
+              <div class="compare-col">
+                <div class="compare-col-label">Article A</div>
+                <input id="source-name-1" type="text" class="url-input" placeholder="Source name" autocomplete="off" spellcheck="false" style="margin-bottom:10px" />
+                <input id="url-input-1" type="url" class="url-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
+                <textarea id="text-input-1" class="text-area cmp-textarea" rows="4" placeholder="…or paste text"></textarea>
+              </div>
+              <div class="compare-col">
+                <div class="compare-col-label">Article B</div>
+                <input id="source-name-2" type="text" class="url-input" placeholder="Source name" autocomplete="off" spellcheck="false" style="margin-bottom:10px" />
+                <input id="url-input-2" type="url" class="url-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
+                <textarea id="text-input-2" class="text-area cmp-textarea" rows="4" placeholder="…or paste text"></textarea>
+              </div>
+            </div>
+
             <button id="analyze-btn" class="analyze-btn">
               <span class="btn-label">Analyze Article</span>
-              <span class="btn-spinner" aria-hidden="true"></span>
-            </button>
-          </div>
-
-          <!-- Compare two articles card — hidden by default -->
-          <div class="glass-card input-card hidden" id="compare-input-card">
-            <p class="section-label">Two-article comparison</p>
-            <div class="compare-inputs-grid">
-
-              <div class="compare-input-col">
-                <p class="compare-ab-label">Article A</p>
-                <input id="source-name-1" type="text" class="text-input" placeholder="Source name" autocomplete="off" spellcheck="false" />
-                <input id="url-input-1" type="url" class="text-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
-                <textarea id="text-input-1" class="text-area cmp-textarea" rows="7" placeholder="…or paste text"></textarea>
-              </div>
-
-              <div class="compare-input-col">
-                <p class="compare-ab-label">Article B</p>
-                <input id="source-name-2" type="text" class="text-input" placeholder="Source name" autocomplete="off" spellcheck="false" />
-                <input id="url-input-2" type="url" class="text-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
-                <textarea id="text-input-2" class="text-area cmp-textarea" rows="7" placeholder="…or paste text"></textarea>
-              </div>
-
-            </div>
-            <button id="compare-btn" class="analyze-btn">
-              <span class="btn-label">Compare Articles</span>
+              <span class="btn-arrow">→</span>
               <span class="btn-spinner" aria-hidden="true"></span>
             </button>
           </div>
