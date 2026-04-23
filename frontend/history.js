@@ -16,14 +16,21 @@ function hideHistoryView() {
 }
 
 async function loadHistory() {
+  const list = document.getElementById('history-list');
   const token = typeof getToken === 'function' ? getToken() : null;
-  if (!token) return;
+  if (!token) {
+    if (list) list.innerHTML = '<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Sign in to see your history.</div></div>';
+    return;
+  }
   try {
     const res = await fetch(
       `${API_BASE_H}/auth/history?offset=${_historyOffset}&limit=${_PAGE_SIZE}`,
       { headers: { 'Authorization': `Bearer ${token}` } }
     );
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (list && _historyOffset === 0) list.innerHTML = `<div class="empty"><div class="empty-icon">⚠</div><div class="empty-text">Couldn't load history (${res.status}).</div></div>`;
+      return;
+    }
     const { items } = await res.json();
     renderCards(items || []);
     _historyOffset += (items || []).length;
@@ -31,6 +38,7 @@ async function loadHistory() {
     if (btn) btn.hidden = (items || []).length < _PAGE_SIZE;
   } catch (e) {
     console.error('Failed to load history:', e);
+    if (list && _historyOffset === 0) list.innerHTML = '<div class="empty"><div class="empty-icon">⚠</div><div class="empty-text">Could not load history. Check your connection.</div></div>';
   }
 }
 

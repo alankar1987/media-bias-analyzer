@@ -167,17 +167,28 @@ function renderResults(payload) {
   renderFactCheck(data.fact_check);
   renderBroadenSection(data.broaden_your_view);
 
+  const savedEl = document.getElementById('saved-indicator');
+  const loggedIn = typeof getSession === 'function' && getSession();
+  if (savedEl) savedEl.hidden = !loggedIn;
+
+  const hero = document.querySelector('.hero');
+  if (hero) hero.style.display = 'none';
   resultsSection.classList.remove("hidden");
-  if (typeof showPage === 'function') showPage('home');
   resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // ── Results header ────────────────────────────────────────────────────────────
+function hostFromUrl(u) {
+  if (!u) return '';
+  try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; }
+}
+
 function renderResultsHeader(data, sourceUrl) {
   const source = data.source || {};
   const titleEl = document.getElementById('results-title');
   const metaEl  = document.getElementById('results-meta');
-  if (titleEl) titleEl.textContent = source.headline || 'Analysis';
+  const fallbackTitle = hostFromUrl(sourceUrl) || 'Pasted article';
+  if (titleEl) titleEl.textContent = source.headline || fallbackTitle;
   if (metaEl) {
     const parts = [source.outlet, data.date, data.article_type].filter(Boolean);
     metaEl.innerHTML = parts.map((p, i) =>
@@ -769,6 +780,14 @@ document.addEventListener('DOMContentLoaded', () => {
         loadAccountUsage();
         return;
       }
+      if (page === 'home') {
+        resultsSection.classList.add('hidden');
+        const cmp = document.getElementById('compare-results');
+        if (cmp) cmp.classList.add('hidden');
+        const hero = document.querySelector('.hero');
+        if (hero) hero.style.display = '';
+        clearError();
+      }
       showPage(page);
     });
   });
@@ -776,7 +795,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initAccountPage();
 
   const logoLink = document.getElementById('nav-logo-link');
-  if (logoLink) logoLink.addEventListener('click', e => { e.preventDefault(); showPage('home'); });
+  if (logoLink) logoLink.addEventListener('click', e => {
+    e.preventDefault();
+    resultsSection.classList.add('hidden');
+    const cmp = document.getElementById('compare-results');
+    if (cmp) cmp.classList.add('hidden');
+    const hero = document.querySelector('.hero');
+    if (hero) hero.style.display = '';
+    clearError();
+    showPage('home');
+  });
 
   const backBtn = document.getElementById('results-back-btn');
   if (backBtn) {
@@ -784,6 +812,9 @@ document.addEventListener('DOMContentLoaded', () => {
       resultsSection.classList.add('hidden');
       const cmp = document.getElementById('compare-results');
       if (cmp) cmp.classList.add('hidden');
+      const hero = document.querySelector('.hero');
+      if (hero) hero.style.display = '';
+      clearError();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }

@@ -48,6 +48,7 @@ function renderAuthUI() {
     container.innerHTML = `<div class="nav-avatar" id="nav-avatar-btn" title="${email}">${initial}</div>`;
     document.getElementById('nav-avatar-btn').addEventListener('click', () => {
       if (typeof showPage === 'function') showPage('account');
+      if (typeof loadAccountUsage === 'function') loadAccountUsage();
     });
   } else {
     container.innerHTML = `<button class="nav-signin-btn" onclick="signInWithGoogle()">Sign in</button>`;
