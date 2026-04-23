@@ -11,6 +11,7 @@
   --text:        #f0f4f8;
   --muted:       rgba(240,244,248,0.50);
   --muted2:      rgba(240,244,248,0.72);
+  --muted-md:    rgba(240,244,248,0.72);
 
   --cyan:        #22d3ee;
   --cyan-bg:     rgba(34,211,238,0.09);
@@ -29,11 +30,12 @@
 
   --amber:       #f59e0b;
   --red:         #ef4444;
+  --gray-bd:   rgba(113,113,122,0.35);
 
-  --r-lg: 24px;
-  --r-md: 18px;
-  --r-sm: 12px;
-  --r-xs:  8px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  --radius-xs:  8px;
 }
 
 html { scroll-behavior: smooth; }
