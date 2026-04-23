@@ -352,28 +352,22 @@ function renderFactCheck(fc) {
 function renderBroadenSection(items) {
   const section = document.getElementById("broaden-section");
   const grid    = document.getElementById("broaden-grid");
-
-  if (!items || !items.length) {
-    section.classList.add("hidden");
-    return;
-  }
-
-  section.classList.remove("hidden");
+  if (!items || !items.length) { if (section) section.style.display = 'none'; return; }
+  if (section) section.style.display = '';
   grid.innerHTML = items.map(item => {
+    const perspective = (item.perspective || 'independent').toLowerCase();
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.outlet + " " + item.angle)}`;
     return `
     <div class="broaden-card">
-      <div class="broaden-card-top">
+      <div class="broaden-top">
         <span class="broaden-outlet">${escapeHtml(item.outlet)}</span>
-        <span class="perspective-tag ${escapeHtml((item.perspective || "").toLowerCase())}">
-          ${escapeHtml(item.perspective || "")}
-        </span>
+        <span class="perspective-tag ${escapeHtml(perspective)}">${escapeHtml(item.perspective || '')}</span>
       </div>
       <p class="broaden-angle">${escapeHtml(item.angle)}</p>
       <p class="broaden-why">${escapeHtml(item.why)}</p>
       <a class="broaden-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">Search on Google →</a>
     </div>
-  `}).join("");
+  `}).join('');
 }
 
 // ── Color helpers ─────────────────────────────────────────────────────────────

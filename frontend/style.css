@@ -741,11 +741,11 @@ nav {
 .claim-explanation { font-size: 13px; color: var(--muted2); }
 
 /* ── Broaden Your View ──────────────────────────────────────────────────── */
-.broaden-section { padding: 8px 0; }
+.broaden-wrap { margin-top: 32px; margin-bottom: 8px; }
 .broaden-heading {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text);
   margin-bottom: 6px;
 }
 .broaden-sub {
@@ -762,60 +762,42 @@ nav {
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  padding: 20px;
-}
-.broaden-card-top {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 18px;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+.broaden-top {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 12px;
 }
-.broaden-outlet {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff;
-}
+.broaden-outlet { font-size: 14px; font-weight: 600; color: var(--text); }
 .perspective-tag {
   border-radius: 99px;
   padding: 3px 10px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  text-transform: capitalize;
-  white-space: nowrap;
-  flex-shrink: 0;
+  letter-spacing: .5px;
 }
-.perspective-tag.conservative { background: rgba(239,68,68,0.20); color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
-.perspective-tag.liberal      { background: rgba(96,165,250,0.20); color: #93c5fd; border: 1px solid rgba(96,165,250,0.25); }
-.perspective-tag.international{ background: rgba(34,211,238,0.15); color: #67e8f9; border: 1px solid rgba(34,211,238,0.20); }
-.perspective-tag.independent  { background: rgba(168,85,247,0.20); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.25); }
-.perspective-tag.local        { background: rgba(16,185,129,0.20); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.25); }
+.perspective-tag.conservative  { background: rgba(239,68,68,.15);   color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
+.perspective-tag.liberal       { background: rgba(59,130,246,.15);  color: #93c5fd; border: 1px solid rgba(59,130,246,.25); }
+.perspective-tag.international { background: rgba(168,85,247,.15);  color: #d8b4fe; border: 1px solid rgba(168,85,247,.25); }
+.perspective-tag.independent   { background: rgba(107,114,128,.15); color: #d1d5db; border: 1px solid rgba(107,114,128,.25); }
+.broaden-angle { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8); }
+.broaden-why   { font-size: 12px; color: var(--muted); }
+.broaden-link  { font-size: 12px; color: var(--cyan); text-decoration: none; margin-top: auto; }
+.broaden-link:hover { text-decoration: underline; }
 
-.broaden-angle {
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.80);
-  margin-bottom: 8px;
-  line-height: 1.5;
-}
-.broaden-why {
+.disclaimer {
+  text-align: center;
   font-size: 12px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-.broaden-link {
-  display: inline-block;
-  margin-top: 12px;
-  font-size: 12px;
-  color: var(--cyan);
-  text-decoration: none;
-  opacity: 0.85;
-}
-.broaden-link:hover {
-  opacity: 1;
-  text-decoration: underline;
+  font-style: italic;
+  color: rgba(255,255,255,0.3);
+  padding: 16px 0 0;
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
@@ -833,15 +815,6 @@ nav {
 }
 .site-footer a:hover {
   color: var(--cyan);
-}
-
-/* ── Disclaimer ────────────────────────────────────────────────────────── */
-.disclaimer {
-  text-align: center;
-  font-size: 12px;
-  font-style: italic;
-  color: rgba(255,255,255,0.40);
-  padding: 12px 0 0;
 }
 
 /* tighter spacing for compare fields */
