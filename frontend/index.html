@@ -179,26 +179,26 @@
           </div>
         </div>
 
-        <!-- Summary card -->
-        <div class="glass-card result-summary-card" id="summary-card">
-          <p class="section-label">Article analysis</p>
-          <div class="summary-badges" id="summary-badges"></div>
-          <div class="summary-block" id="summary-block"></div>
+        <!-- Summary prose -->
+        <div class="summary-prose" id="summary-card">
+          <div class="summary-prose-label">Analysis Summary</div>
+          <p class="summary-prose-text" id="summary-prose-text"></p>
+          <span class="article-type-tag" id="article-type-tag" style="display:none"></span>
         </div>
 
         <!-- Political Lean accordion -->
-        <div class="accordion glass-card-sm" id="acc-political" data-open="true">
-          <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-            <div class="accordion-title-row">
-              <span class="accordion-title">Political Lean</span>
-              <span class="acc-badge" id="political-badge"></span>
+        <div class="accordion" id="acc-political" data-open="true">
+          <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+            <div class="acc-title-row">
+              <span class="acc-title">Political Lean</span>
+              <span class="acc-badge-pill" id="political-badge"></span>
             </div>
-            <span class="chevron">▾</span>
+            <span class="acc-chevron open">▾</span>
           </div>
-          <div class="accordion-body" id="body-political">
+          <div class="acc-body" id="body-political">
             <!-- spectrum -->
             <div class="spectrum-wrap">
-              <div class="spectrum-bar">
+              <div style="position:relative;margin-bottom:8px">
                 <div class="spectrum-track"></div>
                 <div class="spectrum-dot" id="spectrum-dot"></div>
               </div>
@@ -209,41 +209,35 @@
             <p class="conf-line" id="political-conf"></p>
             <p class="body-text" id="political-explanation"></p>
 
-            <!-- framing choices -->
             <div class="subsection" id="framing-section">
-              <p class="subsection-label">Framing choices</p>
+              <p class="sub-label">Framing Choices</p>
               <div class="quote-list" id="quote-list"></div>
             </div>
-
-            <!-- source selection -->
             <div class="subsection" id="sources-section">
-              <p class="subsection-label">Source selection</p>
+              <p class="sub-label">Source Selection</p>
               <p class="body-text" id="source-summary"></p>
               <div class="source-tags" id="source-tags"></div>
             </div>
-
-            <!-- notable omissions -->
             <div class="subsection" id="omissions-section">
-              <p class="subsection-label">Notable omissions</p>
+              <p class="sub-label">Notable Omissions</p>
               <div class="omission-list" id="omission-list"></div>
             </div>
           </div>
         </div>
 
         <!-- Sentiment accordion -->
-        <div class="accordion glass-card-sm" id="acc-sentiment" data-open="false">
-          <div class="accordion-header" role="button" tabindex="0" aria-expanded="false">
-            <div class="accordion-title-row">
-              <span class="accordion-title">Sentiment</span>
-              <span class="acc-badge" id="sentiment-badge"></span>
+        <div class="accordion" id="acc-sentiment" data-open="false">
+          <div class="acc-head" role="button" tabindex="0" aria-expanded="false">
+            <div class="acc-title-row">
+              <span class="acc-title">Sentiment</span>
+              <span class="acc-badge-pill" id="sentiment-badge"></span>
             </div>
-            <span class="chevron">▾</span>
+            <span class="acc-chevron">▾</span>
           </div>
-          <div class="accordion-body hidden" id="body-sentiment">
-            <!-- gauge -->
-            <div class="gauge-wrap">
+          <div class="acc-body hidden" id="body-sentiment">
+            <div>
               <div class="gauge-track">
-                <div class="gauge-fill" id="gauge-fill"></div>
+                <div class="gauge-cover" id="gauge-fill"></div>
               </div>
               <div class="gauge-labels">
                 <span>Very Negative</span><span>Neutral</span><span>Very Positive</span>
@@ -254,15 +248,15 @@
         </div>
 
         <!-- Fact Check accordion -->
-        <div class="accordion glass-card-sm" id="acc-fact" data-open="true">
-          <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-            <div class="accordion-title-row">
-              <span class="accordion-title">Fact Check</span>
-              <span class="acc-badge acc-badge-green" id="fact-badge"></span>
+        <div class="accordion" id="acc-fact" data-open="true">
+          <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+            <div class="acc-title-row">
+              <span class="acc-title">Fact Check</span>
+              <span class="acc-badge-pill" id="fact-badge"></span>
             </div>
-            <span class="chevron">▾</span>
+            <span class="acc-chevron open">▾</span>
           </div>
-          <div class="accordion-body" id="body-fact">
+          <div class="acc-body" id="body-fact">
             <p class="body-text" id="fact-summary"></p>
             <div class="claim-list" id="claim-list"></div>
           </div>

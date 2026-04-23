@@ -62,9 +62,10 @@ function setLoading(on) {
 // ── Accordion ─────────────────────────────────────────────────────────────────
 function initAccordions() {
   document.querySelectorAll(".accordion").forEach(acc => {
-    const header = acc.querySelector(".accordion-header");
-    header.addEventListener("click", () => toggleAccordion(acc));
-    header.addEventListener("keydown", e => {
+    const head = acc.querySelector(".acc-head");
+    if (!head) return;
+    head.addEventListener("click", () => toggleAccordion(acc));
+    head.addEventListener("keydown", e => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleAccordion(acc); }
     });
   });
@@ -72,17 +73,23 @@ function initAccordions() {
 
 function toggleAccordion(acc) {
   const isOpen = acc.dataset.open === "true";
-  const body   = acc.querySelector(".accordion-body");
-  const header = acc.querySelector(".accordion-header");
+  const body    = acc.querySelector(".acc-body");
+  const head    = acc.querySelector(".acc-head");
+  const chevron = acc.querySelector(".acc-chevron");
   acc.dataset.open = isOpen ? "false" : "true";
-  header.setAttribute("aria-expanded", String(!isOpen));
-  body.classList.toggle("hidden", isOpen);
+  if (head) head.setAttribute("aria-expanded", String(!isOpen));
+  if (body) body.classList.toggle("hidden", isOpen);
+  if (chevron) chevron.classList.toggle("open", !isOpen);
 }
 
 function openAccordion(acc) {
   acc.dataset.open = "true";
-  acc.querySelector(".accordion-header").setAttribute("aria-expanded", "true");
-  acc.querySelector(".accordion-body").classList.remove("hidden");
+  const head = acc.querySelector(".acc-head");
+  const body = acc.querySelector(".acc-body");
+  const chev = acc.querySelector(".acc-chevron");
+  if (head) head.setAttribute("aria-expanded", "true");
+  if (body) body.classList.remove("hidden");
+  if (chev) chev.classList.add("open");
 }
 
 // ── Analyze ───────────────────────────────────────────────────────────────────
@@ -221,39 +228,13 @@ function renderScoreCards(data) {
 
 // ── Summary card ──────────────────────────────────────────────────────────────
 function renderSummaryCard(data) {
-  const pl = data.political_lean || {};
-  const s  = data.sentiment      || {};
-  const fc = data.fact_check     || {};
-
-  const leanNum  = typeof pl.numeric === "number" ? pl.numeric : 0;
-  const sentNum  = typeof s.numeric  === "number" ? s.numeric  : 0;
-  const leanSign = leanNum >= 0 ? `+${leanNum}` : String(leanNum);
-  const sentSign = sentNum >= 0 ? `+${sentNum}`  : String(sentNum);
-
-  // Pick sum-badge color variant based on lean direction
-  const leanVariant = leanNum < -2 ? "cyan" : leanNum > 2 ? "purple" : "green";
-  const sentVariant = sentNum < -20 ? "purple" : sentNum > 20 ? "green" : "cyan";
-
-  document.getElementById("summary-badges").innerHTML = `
-    <div class="sum-badge sum-badge-${leanVariant}">
-      <div class="sum-badge-label">Political Lean</div>
-      <div class="sum-badge-value">${escapeHtml(pl.label || "—")} <small style="opacity:.75">(${leanSign})</small></div>
-    </div>
-    <div class="sum-badge sum-badge-${sentVariant}">
-      <div class="sum-badge-label">Sentiment</div>
-      <div class="sum-badge-value">${escapeHtml(s.label || "—")} <small style="opacity:.75">(${sentSign})</small></div>
-    </div>
-    <div class="sum-badge sum-badge-green">
-      <div class="sum-badge-label">Fact Check</div>
-      <div class="sum-badge-value">${fc.score != null ? fc.score + "/100" : "—"}</div>
-    </div>
-  `;
-
-  const typeTag = data.article_type
-    ? `<span class="article-type-tag">${escapeHtml(data.article_type)}</span>`
-    : "";
-  document.getElementById("summary-block").innerHTML =
-    typeTag + `<p class="body-text">${escapeHtml(data.summary || "")}</p>`;
+  const typeTag = document.getElementById('article-type-tag');
+  if (typeTag) {
+    typeTag.textContent = data.article_type || '';
+    typeTag.style.display = data.article_type ? 'inline-block' : 'none';
+  }
+  const prose = document.getElementById('summary-prose-text');
+  if (prose) prose.textContent = data.summary || '';
 }
 
 // ── Political Lean accordion ──────────────────────────────────────────────────
@@ -268,7 +249,12 @@ function renderPoliticalLean(pl) {
   // Spectrum dot  →  map numeric -10…+10 to 0%…100%
   const numeric = typeof pl.numeric === "number" ? pl.numeric : (pl.score || 0) * 10;
   const pct = clamp(((numeric / 10 + 1) / 2) * 100, 2, 98);
-  document.getElementById("spectrum-dot").style.left = `calc(${pct}% - 6px)`;
+  const spectrumDot = document.getElementById("spectrum-dot");
+  if (spectrumDot) {
+    spectrumDot.style.left = `calc(${pct}% - 9px)`;
+    spectrumDot.style.background = leanBadgeColor(pl.label);
+    spectrumDot.style.boxShadow = `0 2px 12px ${leanBadgeColor(pl.label)}80`;
+  }
 
   // Confidence + explanation
   document.getElementById("political-conf").textContent =
@@ -510,9 +496,10 @@ function renderCompareResults(d1, d2, label1 = "Article A", label2 = "Article B"
 
   // Wire accordion toggles for the newly injected HTML
   cols.querySelectorAll(".accordion").forEach(acc => {
-    const header = acc.querySelector(".accordion-header");
-    header.addEventListener("click", () => toggleAccordion(acc));
-    header.addEventListener("keydown", e => {
+    const head = acc.querySelector(".acc-head");
+    if (!head) return;
+    head.addEventListener("click", () => toggleAccordion(acc));
+    head.addEventListener("keydown", e => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleAccordion(acc); }
     });
   });
@@ -552,28 +539,26 @@ function buildCompareCol(data, n, label) {
       </div>
 
       <!-- summary -->
-      <div class="glass-card result-summary-card">
-        <p class="section-label">Summary</p>
-        <div class="summary-block">
-          ${typeTag}
-          <p class="body-text">${escapeHtml(data.summary || "")}</p>
-        </div>
+      <div class="summary-prose">
+        <div class="summary-prose-label">Summary</div>
+        <p class="summary-prose-text">${escapeHtml(data.summary || "")}</p>
+        ${typeTag ? `<span class="article-type-tag">${escapeHtml(data.article_type || "")}</span>` : ""}
       </div>
 
       <!-- political lean -->
-      <div class="accordion glass-card-sm" data-open="true">
-        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="accordion-title-row">
-            <span class="accordion-title">Political Lean</span>
-            <span class="acc-badge" style="color:${leanBadgeColor(pl.label)}">${escapeHtml(pl.label || "")}</span>
+      <div class="accordion" data-open="true">
+        <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+          <div class="acc-title-row">
+            <span class="acc-title">Political Lean</span>
+            <span class="acc-badge-pill" style="color:${leanBadgeColor(pl.label)}">${escapeHtml(pl.label || "")}</span>
           </div>
-          <span class="chevron">▾</span>
+          <span class="acc-chevron open">▾</span>
         </div>
-        <div class="accordion-body">
+        <div class="acc-body">
           <div class="spectrum-wrap">
-            <div class="spectrum-bar">
+            <div style="position:relative;margin-bottom:8px">
               <div class="spectrum-track"></div>
-              <div class="spectrum-dot" style="left:calc(${pct}% - 6px)"></div>
+              <div class="spectrum-dot" style="left:calc(${pct}% - 9px);background:${leanBadgeColor(pl.label)};box-shadow:0 2px 12px ${leanBadgeColor(pl.label)}80"></div>
             </div>
             <div class="spectrum-labels"><span>Left</span><span>Center</span><span>Right</span></div>
           </div>
@@ -583,18 +568,18 @@ function buildCompareCol(data, n, label) {
       </div>
 
       <!-- sentiment -->
-      <div class="accordion glass-card-sm" data-open="true">
-        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="accordion-title-row">
-            <span class="accordion-title">Sentiment</span>
-            <span class="acc-badge" style="color:${sentBadgeColor(s.label)}">${escapeHtml(s.label || "")}</span>
+      <div class="accordion" data-open="true">
+        <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+          <div class="acc-title-row">
+            <span class="acc-title">Sentiment</span>
+            <span class="acc-badge-pill" style="color:${sentBadgeColor(s.label)}">${escapeHtml(s.label || "")}</span>
           </div>
-          <span class="chevron">▾</span>
+          <span class="acc-chevron open">▾</span>
         </div>
-        <div class="accordion-body">
-          <div class="gauge-wrap">
+        <div class="acc-body">
+          <div>
             <div class="gauge-track">
-              <div class="gauge-fill" style="left:${gaugePct}%"></div>
+              <div class="gauge-cover" style="left:${gaugePct}%"></div>
             </div>
             <div class="gauge-labels"><span>Very Negative</span><span>Neutral</span><span>Very Positive</span></div>
           </div>
@@ -603,15 +588,15 @@ function buildCompareCol(data, n, label) {
       </div>
 
       <!-- fact check -->
-      <div class="accordion glass-card-sm" data-open="true">
-        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="accordion-title-row">
-            <span class="accordion-title">Fact Check</span>
-            <span class="acc-badge" style="color:${factBadgeColor(fc.score)}">${fc.score != null ? fc.score + "/100" : ""}</span>
+      <div class="accordion" data-open="true">
+        <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+          <div class="acc-title-row">
+            <span class="acc-title">Fact Check</span>
+            <span class="acc-badge-pill" style="color:${factBadgeColor(fc.score)}">${fc.score != null ? fc.score + "/100" : ""}</span>
           </div>
-          <span class="chevron">▾</span>
+          <span class="acc-chevron open">▾</span>
         </div>
-        <div class="accordion-body">
+        <div class="acc-body">
           <p class="body-text">${escapeHtml(fc.summary || "")}</p>
           <div class="claim-list">${claims}</div>
         </div>
