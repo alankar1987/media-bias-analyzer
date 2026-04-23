@@ -265,12 +265,6 @@ nav {
   -webkit-backdrop-filter: blur(20px);
   padding: 28px;
 }
-.glass-card-sm {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: rgba(0,0,0,0.20);
-  overflow: hidden;
-}
 
 /* ── Input col ─────────────────────────────────────────────────────────── */
 .input-col { position: sticky; top: 80px; }
@@ -891,7 +885,7 @@ nav {
 @media (max-width: 560px) {
   .hero-h { font-size: 30px; }
   .trust-row { flex-direction: column; }
-  .glass-card, .glass-card-sm { border-radius: 16px; }
+  .glass-card { border-radius: 16px; }
 }
 
 /* ── Auth UI ──────────────────────────────────────────────────────────── */
