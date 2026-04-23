@@ -151,6 +151,34 @@
       <!-- ── Results ────────────────────────────────────────────────── -->
       <section id="results" class="results hidden">
 
+        <!-- Results header -->
+        <div class="results-header" id="results-header">
+          <button class="back-btn" id="results-back-btn">← New Analysis</button>
+          <div class="results-title-block">
+            <div class="results-title" id="results-title"></div>
+            <div class="results-meta" id="results-meta"></div>
+          </div>
+        </div>
+
+        <!-- Score row -->
+        <div class="score-row" id="score-row">
+          <div class="score-card">
+            <div class="score-card-label">Political Lean</div>
+            <div class="score-card-value" id="sc-lean-value">—</div>
+            <div class="score-card-sub" id="sc-lean-sub"></div>
+          </div>
+          <div class="score-card">
+            <div class="score-card-label">Sentiment</div>
+            <div class="score-card-value" id="sc-sent-value">—</div>
+            <div class="score-card-sub" id="sc-sent-sub"></div>
+          </div>
+          <div class="score-card">
+            <div class="score-card-label">Fact Check</div>
+            <div class="score-card-value" id="sc-fact-value">—</div>
+            <div class="score-card-sub" id="sc-fact-sub"></div>
+          </div>
+        </div>
+
         <!-- Summary card -->
         <div class="glass-card result-summary-card" id="summary-card">
           <p class="section-label">Article analysis</p>

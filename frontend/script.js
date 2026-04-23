@@ -152,6 +152,8 @@ function renderResults(payload) {
   const data = payload.data;
   if (!data) { showError("No analysis data returned."); return; }
 
+  renderResultsHeader(data, payload.source_url);
+  renderScoreCards(data);
   renderSummaryCard(data);
   renderPoliticalLean(data.political_lean);
   renderSentiment(data.sentiment);
@@ -159,7 +161,62 @@ function renderResults(payload) {
   renderBroadenSection(data.broaden_your_view);
 
   resultsSection.classList.remove("hidden");
+  if (typeof showPage === 'function') showPage('home');
   resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ── Results header ────────────────────────────────────────────────────────────
+function renderResultsHeader(data, sourceUrl) {
+  const source = data.source || {};
+  const titleEl = document.getElementById('results-title');
+  const metaEl  = document.getElementById('results-meta');
+  if (titleEl) titleEl.textContent = source.headline || 'Analysis';
+  if (metaEl) {
+    const parts = [source.outlet, data.date, data.article_type].filter(Boolean);
+    metaEl.innerHTML = parts.map((p, i) =>
+      i < parts.length - 1
+        ? `<span>${escapeHtml(p)}</span><span class="results-meta-dot"></span>`
+        : `<span>${escapeHtml(p)}</span>`
+    ).join('');
+  }
+}
+
+// ── Score cards row ───────────────────────────────────────────────────────────
+function renderScoreCards(data) {
+  const pl = data.political_lean || {};
+  const s  = data.sentiment      || {};
+  const fc = data.fact_check     || {};
+
+  const leanNum = typeof pl.numeric === 'number' ? pl.numeric : 0;
+  const leanSign = leanNum >= 0 ? `+${leanNum.toFixed(1)}` : leanNum.toFixed(1);
+  const leanVal  = document.getElementById('sc-lean-value');
+  const leanSub  = document.getElementById('sc-lean-sub');
+  if (leanVal) { leanVal.textContent = pl.label || '—'; leanVal.style.color = leanBadgeColor(pl.label); }
+  if (leanSub) leanSub.textContent = pl.label
+    ? `Score: ${leanSign} / 10 · ${pl.confidence || ''} confidence`
+    : '';
+
+  const sentNum = typeof s.numeric === 'number' ? s.numeric : 0;
+  const sentVal = document.getElementById('sc-sent-value');
+  const sentSub = document.getElementById('sc-sent-sub');
+  if (sentVal) { sentVal.textContent = s.label || '—'; sentVal.style.color = sentBadgeColor(s.label); }
+  if (sentSub) sentSub.textContent = s.label
+    ? `Score: ${sentNum >= 0 ? '+' : ''}${sentNum} / 100`
+    : '';
+
+  const factVal = document.getElementById('sc-fact-value');
+  const factSub = document.getElementById('sc-fact-sub');
+  if (factVal) {
+    factVal.innerHTML = fc.score != null
+      ? `${fc.score}<span style="font-size:16px;font-weight:400;opacity:.5">/100</span>`
+      : '—';
+    factVal.style.color = factBadgeColor(fc.score);
+  }
+  if (factSub) {
+    const supported = (fc.claims || []).filter(c => (c.verdict || '').toLowerCase() === 'supported').length;
+    const disputed  = (fc.claims || []).filter(c => (c.verdict || '').toLowerCase() === 'disputed').length;
+    factSub.textContent = fc.score != null ? `${supported} supported · ${disputed} disputed` : '';
+  }
 }
 
 // ── Summary card ──────────────────────────────────────────────────────────────
@@ -649,4 +706,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const logoLink = document.getElementById('nav-logo-link');
   if (logoLink) logoLink.addEventListener('click', e => { e.preventDefault(); showPage('home'); });
+
+  const backBtn = document.getElementById('results-back-btn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      resultsSection.classList.add('hidden');
+      const cmp = document.getElementById('compare-results');
+      if (cmp) cmp.classList.add('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
 });
