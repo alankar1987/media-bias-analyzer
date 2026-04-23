@@ -282,7 +282,20 @@
       </section><!-- /page-home -->
 
     <section class="page-section" id="page-history" hidden>
-      <!-- Content added in Task 8 -->
+      <div class="page-header">
+        <div class="page-title">My History</div>
+        <p class="page-sub">All your analyzed articles, saved automatically.</p>
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="history-search" placeholder="Search your history…" autocomplete="off" />
+        </div>
+      </div>
+
+      <div id="history-list"></div>
+
+      <div style="text-align:center;margin-top:24px">
+        <button class="load-more-btn" id="history-load-more" hidden>Load more</button>
+      </div>
     </section>
 
     <section class="page-section" id="page-account" hidden>

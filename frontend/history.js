@@ -25,55 +25,13 @@ async function loadHistory() {
     );
     if (!res.ok) return;
     const { items } = await res.json();
-    if (_historyOffset === 0) renderStats(items);
-    renderCards(items);
-    _historyOffset += items.length;
-    document.getElementById('history-load-more').hidden = items.length < _PAGE_SIZE;
+    renderCards(items || []);
+    _historyOffset += (items || []).length;
+    const btn = document.getElementById('history-load-more');
+    if (btn) btn.hidden = (items || []).length < _PAGE_SIZE;
   } catch (e) {
     console.error('Failed to load history:', e);
   }
-}
-
-function renderStats(items) {
-  const el = document.getElementById('history-stats');
-  if (!items.length) {
-    el.innerHTML = '<p style="color:rgba(255,255,255,0.4);text-align:center;grid-column:1/-1">No analyses yet.</p>';
-    return;
-  }
-  const total = items.length;
-  const withScore = items.filter(i => i.fact_score != null);
-  const avgScore = withScore.length
-    ? Math.round(withScore.reduce((s, i) => s + i.fact_score, 0) / withScore.length)
-    : 0;
-  const leanCounts = {};
-  items.forEach(i => { if (i.lean_label) leanCounts[i.lean_label] = (leanCounts[i.lean_label] || 0) + 1; });
-  const topLean = Object.entries(leanCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
-  el.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-value cyan">${total}</div>
-      <div class="stat-label">Analyzed</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value purple">${topLean}</div>
-      <div class="stat-label">Avg Lean</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value green">${avgScore || '—'}</div>
-      <div class="stat-label">Avg Score</div>
-    </div>
-  `;
-}
-
-function leanPosition(numeric) {
-  if (numeric == null) return 50;
-  return Math.round(((numeric + 10) / 20) * 100);
-}
-
-function scoreColor(score) {
-  if (score == null) return 'rgba(255,255,255,0.5)';
-  if (score >= 70) return '#10b981';
-  if (score >= 50) return '#d97706';
-  return '#ef4444';
 }
 
 function escapeH(str) {
@@ -81,60 +39,92 @@ function escapeH(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function renderCards(items) {
-  const grid = document.getElementById('history-grid');
-  items.forEach(item => {
-    const pos = leanPosition(item.lean_numeric);
-    const color = scoreColor(item.fact_score);
-    const date = new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const card = document.createElement('div');
-    card.className = 'history-card glass-card';
-    card.dataset.id = item.id;
-    card.innerHTML = `
-      <div class="hcard-outlet">${escapeH(item.source_name || 'Unknown')}</div>
-      <div class="hcard-headline">${escapeH(item.headline || item.url || 'Untitled')}</div>
-      <div class="lean-bar">
-        <div class="lean-dot" style="left:${pos}%"></div>
-      </div>
-      <div class="hcard-meta">
-        <span class="hcard-lean">${escapeH(item.lean_label || '—')}</span>
-        <span class="hcard-score" style="color:${color}">${item.fact_score != null ? item.fact_score + '/100' : '—'}</span>
-        <span class="hcard-date">${date}</span>
-      </div>
-    `;
-    card.addEventListener('click', () => openHistoryDrawer(item.id));
-    grid.appendChild(card);
-  });
+function leanBadgeClass(lean) {
+  if (!lean) return 'h-badge h-badge-center';
+  const l = lean.toLowerCase();
+  if (l.includes('left'))  return 'h-badge h-badge-left';
+  if (l.includes('right')) return 'h-badge h-badge-right';
+  return 'h-badge h-badge-center';
 }
 
-async function openHistoryDrawer(id) {
-  const token = typeof getToken === 'function' ? getToken() : null;
-  if (!token) return;
-  try {
-    const res = await fetch(`${API_BASE_H}/auth/history/${id}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!res.ok) return;
-    const row = await res.json();
-    const lean = row.result_json?.political_lean || {};
-    const fc = row.result_json?.fact_check || {};
-    document.getElementById('history-drawer-content').innerHTML = `
-      <h3 style="margin-bottom:8px">${escapeH(row.headline || 'Analysis')}</h3>
-      <p style="color:rgba(255,255,255,0.4);font-size:12px;margin-bottom:16px">${escapeH(row.url || '')}</p>
-      <div class="result-summary">
-        <div><strong>Lean:</strong> ${escapeH(lean.label || '—')} (${lean.numeric ?? '—'})</div>
-        <div><strong>Fact score:</strong> ${fc.score ?? '—'}/100</div>
-        <div><strong>Summary:</strong> ${escapeH(lean.summary || '—')}</div>
-      </div>
-    `;
-    document.getElementById('history-drawer').hidden = false;
-    document.getElementById('history-drawer').scrollIntoView({ behavior: 'smooth' });
-  } catch (e) {
-    console.error('Failed to load analysis:', e);
+function renderCards(items) {
+  const list = document.getElementById('history-list');
+  if (!list) return;
+  if (!items.length && _historyOffset === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No analyses yet. Analyze an article to get started.</div></div>';
+    return;
   }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+
+  function dateLabel(item) {
+    const d = new Date(item.created_at); d.setHours(0,0,0,0);
+    if (d.getTime() >= today.getTime()) return 'Today';
+    if (d.getTime() >= yesterday.getTime()) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  const grouped = {};
+  const groupOrder = [];
+  items.forEach(item => {
+    const label = dateLabel(item);
+    if (!grouped[label]) { grouped[label] = []; groupOrder.push(label); }
+    grouped[label].push(item);
+  });
+
+  groupOrder.forEach(label => {
+    const groupDiv = document.createElement('div');
+    const labelEl = document.createElement('div');
+    labelEl.className = 'history-group-label';
+    labelEl.textContent = label;
+    groupDiv.appendChild(labelEl);
+
+    grouped[label].forEach(item => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'history-item';
+      itemEl.dataset.id = item.id;
+      const factScorePill = item.fact_score != null
+        ? `<span class="h-badge h-badge-score">${item.fact_score}/100</span>`
+        : '';
+      const leanPill = item.lean_label
+        ? `<span class="${escapeH(leanBadgeClass(item.lean_label))}">${escapeH(item.lean_label)}</span>`
+        : '';
+      const timeStr = new Date(item.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      itemEl.innerHTML = `
+        <div class="history-icon" style="background:rgba(34,211,238,0.12)">⊙</div>
+        <div class="history-body">
+          <div class="history-title">${escapeH(item.headline || item.url || 'Untitled')}</div>
+          <div class="history-meta">
+            <span>${escapeH(item.source_name || 'Unknown')}</span>
+            <span>·</span>
+            <span>${timeStr}</span>
+          </div>
+        </div>
+        <div class="history-badges">${leanPill}${factScorePill}</div>
+      `;
+      itemEl.addEventListener('click', () => {
+        console.log('Open analysis:', item.id);
+      });
+      groupDiv.appendChild(itemEl);
+    });
+    list.appendChild(groupDiv);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   const btn = document.getElementById('history-load-more');
   if (btn) btn.addEventListener('click', loadHistory);
+
+  const searchInput = document.getElementById('history-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase().trim();
+      document.querySelectorAll('.history-item').forEach(el => {
+        const title  = el.querySelector('.history-title')?.textContent.toLowerCase() || '';
+        const source = el.querySelector('.history-meta span')?.textContent.toLowerCase() || '';
+        el.style.display = (!q || title.includes(q) || source.includes(q)) ? '' : 'none';
+      });
+    });
+  }
 });
