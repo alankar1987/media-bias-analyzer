@@ -4,6 +4,10 @@
 
 const API_BASE = "https://media-bias-analyzer-production.up.railway.app";
 
+// ── State ─────────────────────────────────────────────────────────────────────
+let lastAnalyzedUrl     = "";
+let lastAnalyzedPayload = null;
+
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const urlInput       = document.getElementById("url-input");
 const textInput      = document.getElementById("text-input");
@@ -25,6 +29,11 @@ function escapeHtml(str) {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
+function titleCase(str) {
+  if (!str) return str;
+  return str.replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function showError(msg) {
   errorText.textContent = msg;
   errorBanner.classList.remove("hidden");
@@ -41,6 +50,24 @@ function setLoading(on) {
   analyzeBtn.disabled = on;
   analyzeBtn.querySelector(".btn-label").textContent = on ? "Analyzing…" : "Analyze Article";
 }
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function navigateTo(pageId) {
+  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+  document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+  const page = document.getElementById("page-" + pageId);
+  if (page) page.classList.remove("hidden");
+  const link = document.querySelector(`.nav-link[data-page="${pageId}"]`);
+  if (link) link.classList.add("active");
+
+  if (pageId === "history") renderHistoryPage();
+  if (pageId === "account") renderAccountPage();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+document.querySelectorAll(".nav-link").forEach(btn => {
+  btn.addEventListener("click", () => navigateTo(btn.dataset.page));
+});
 
 // ── Accordion ─────────────────────────────────────────────────────────────────
 function initAccordions() {
@@ -79,6 +106,7 @@ async function analyzeArticle() {
     return;
   }
 
+  lastAnalyzedUrl = url;
   setLoading(true);
   resultsSection.classList.add("hidden");
 
@@ -100,10 +128,12 @@ async function analyzeArticle() {
       return;
     }
 
+    lastAnalyzedPayload = payload;
     renderResults(payload);
+    saveToHistory(payload.data, url, "single");
   } catch (err) {
     if (err.name === "TypeError" && err.message.includes("fetch")) {
-      showError("Cannot reach the backend. Make sure the FastAPI server is running on port 8000.");
+      showError("Cannot reach the backend. Make sure the FastAPI server is running.");
     } else {
       showError("Unexpected error: " + err.message);
     }
@@ -117,73 +147,123 @@ function renderResults(payload) {
   const data = payload.data;
   if (!data) { showError("No analysis data returned."); return; }
 
-  renderSummaryCard(data);
+  renderResultsHeader(data, lastAnalyzedUrl);
+  renderScoreCards(data);
+  renderSummaryBlock(data);
   renderPoliticalLean(data.political_lean);
   renderSentiment(data.sentiment);
   renderFactCheck(data.fact_check);
   renderBroadenSection(data.broaden_your_view);
 
+  const saveBtn = document.getElementById("save-btn");
+  if (saveBtn) {
+    saveBtn.classList.remove("saved");
+    saveBtn.textContent = "Save to History ✓";
+  }
+
+  document.querySelector(".hero").classList.add("hidden");
   resultsSection.classList.remove("hidden");
-  resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ── Summary card ──────────────────────────────────────────────────────────────
-function renderSummaryCard(data) {
+// ── Results header ────────────────────────────────────────────────────────────
+function renderResultsHeader(data, url) {
+  let source = "Unknown source";
+  if (url) {
+    try { source = new URL(url).hostname.replace(/^www\./, ""); } catch (_) {}
+  }
+  const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const articleType = data.article_type || "";
+
+  const titleEl = document.getElementById("results-title");
+  const metaEl  = document.getElementById("results-meta");
+  if (titleEl) titleEl.textContent = url ? source + " article" : "Article Analysis";
+
+  if (metaEl) {
+    const parts = [escapeHtml(source), escapeHtml(date)];
+    if (articleType) parts.push(escapeHtml(articleType));
+    metaEl.innerHTML = parts
+      .map(p => `<span>${p}</span>`)
+      .join('<span class="meta-dot">·</span>');
+  }
+}
+
+// ── Score cards ───────────────────────────────────────────────────────────────
+function renderScoreCards(data) {
   const pl = data.political_lean || {};
   const s  = data.sentiment      || {};
   const fc = data.fact_check     || {};
 
   const leanNum  = typeof pl.numeric === "number" ? pl.numeric : 0;
   const sentNum  = typeof s.numeric  === "number" ? s.numeric  : 0;
-  const leanSign = leanNum >= 0 ? `+${leanNum}` : String(leanNum);
-  const sentSign = sentNum >= 0 ? `+${sentNum}`  : String(sentNum);
+  const leanSign = leanNum >= 0 ? `+${leanNum.toFixed(1)}` : leanNum.toFixed(1);
+  const sentSign = sentNum >= 0 ? `+${Math.round(sentNum)}` : String(Math.round(sentNum));
 
-  // Pick sum-badge color variant based on lean direction
-  const leanVariant = leanNum < -2 ? "cyan" : leanNum > 2 ? "purple" : "green";
-  const sentVariant = sentNum < -20 ? "purple" : sentNum > 20 ? "green" : "cyan";
+  const leanColor = leanNum < -1 ? "#22d3ee" : leanNum > 1 ? "#ef4444" : "rgba(240,244,248,0.50)";
+  const sentColor = sentNum > 20  ? "#10b981" : sentNum < -20 ? "#ef4444" : "rgba(240,244,248,0.50)";
+  const factScore = fc.score != null ? fc.score : null;
+  const factColor = factScore === null ? "rgba(240,244,248,0.50)"
+                  : factScore >= 80   ? "#10b981"
+                  : factScore >= 60   ? "#f59e0b"
+                  : "#ef4444";
+  const factReliability = factScore === null ? "No data"
+                        : factScore >= 80    ? "High reliability"
+                        : factScore >= 60    ? "Moderate reliability"
+                        : "Low reliability";
 
-  document.getElementById("summary-badges").innerHTML = `
-    <div class="sum-badge sum-badge-${leanVariant}">
-      <div class="sum-badge-label">Political Lean</div>
-      <div class="sum-badge-value">${escapeHtml(pl.label || "—")} <small style="opacity:.75">(${leanSign})</small></div>
+  const row = document.getElementById("score-cards-row");
+  if (!row) return;
+  row.innerHTML = `
+    <div class="score-card">
+      <div class="score-card-label">Political Lean</div>
+      <div class="score-card-value" style="color:${leanColor}">${escapeHtml(titleCase(pl.label) || "—")}</div>
+      <div class="score-card-sub">Score: ${leanSign} / 10 · ${escapeHtml(titleCase(pl.confidence) || "N/A")}</div>
     </div>
-    <div class="sum-badge sum-badge-${sentVariant}">
-      <div class="sum-badge-label">Sentiment</div>
-      <div class="sum-badge-value">${escapeHtml(s.label || "—")} <small style="opacity:.75">(${sentSign})</small></div>
+    <div class="score-card">
+      <div class="score-card-label">Sentiment</div>
+      <div class="score-card-value" style="color:${sentColor}">${escapeHtml(titleCase(s.label) || "—")}</div>
+      <div class="score-card-sub">Score: ${sentSign} / 100</div>
     </div>
-    <div class="sum-badge sum-badge-green">
-      <div class="sum-badge-label">Fact Check</div>
-      <div class="sum-badge-value">${fc.score != null ? fc.score + "/100" : "—"}</div>
+    <div class="score-card">
+      <div class="score-card-label">Fact Check</div>
+      <div class="score-card-value" style="color:${factColor}">${factScore !== null ? factScore + "/100" : "—"}</div>
+      <div class="score-card-sub">${factReliability}</div>
     </div>
   `;
+}
 
+// ── Summary block ─────────────────────────────────────────────────────────────
+function renderSummaryBlock(data) {
+  const block = document.getElementById("summary-block");
+  if (!block) return;
   const typeTag = data.article_type
     ? `<span class="article-type-tag">${escapeHtml(data.article_type)}</span>`
     : "";
-  document.getElementById("summary-block").innerHTML =
-    typeTag + `<p class="body-text">${escapeHtml(data.summary || "")}</p>`;
+  block.innerHTML = `
+    <div class="summary-prose-label">Analysis Summary</div>
+    <p class="summary-prose-text">${escapeHtml(data.summary || "")}</p>
+    ${typeTag}
+  `;
 }
 
 // ── Political Lean accordion ──────────────────────────────────────────────────
 function renderPoliticalLean(pl) {
   if (!pl) return;
 
-  // Accordion badge
   const badge = document.getElementById("political-badge");
-  badge.textContent = pl.label || "";
+  badge.textContent = titleCase(pl.label) || "";
   badge.style.color = leanBadgeColor(pl.label);
 
-  // Spectrum dot  →  map numeric -10…+10 to 0%…100%
   const numeric = typeof pl.numeric === "number" ? pl.numeric : (pl.score || 0) * 10;
   const pct = clamp(((numeric / 10 + 1) / 2) * 100, 2, 98);
-  document.getElementById("spectrum-dot").style.left = `calc(${pct}% - 6px)`;
+  const dot = document.getElementById("spectrum-dot");
+  dot.style.left = `calc(${pct}% - 9px)`;
+  dot.style.background = leanBadgeColor(pl.label);
 
-  // Confidence + explanation
   document.getElementById("political-conf").textContent =
-    pl.confidence ? `Confidence: ${pl.confidence}` : "";
+    pl.confidence ? `Confidence: ${titleCase(pl.confidence)}` : "";
   document.getElementById("political-explanation").textContent = pl.explanation || "";
 
-  // Framing choices
   const choices = pl.framing_choices || [];
   const framingSection = document.getElementById("framing-section");
   if (choices.length) {
@@ -194,14 +274,12 @@ function renderPoliticalLean(pl) {
         <div class="quote-card lean-${escapeHtml(lean)}">
           <blockquote class="quote-text">"${escapeHtml(c.quote)}"</blockquote>
           <p class="quote-analysis">${escapeHtml(c.analysis)}</p>
-        </div>
-      `;
+        </div>`;
     }).join("");
   } else {
     framingSection.classList.add("hidden");
   }
 
-  // Source selection
   const ss = pl.source_selection || {};
   const sourcesSection = document.getElementById("sources-section");
   if (ss.summary || (ss.sources && ss.sources.length)) {
@@ -214,7 +292,6 @@ function renderPoliticalLean(pl) {
     sourcesSection.classList.add("hidden");
   }
 
-  // Notable omissions
   const omissions = pl.notable_omissions || [];
   const omissionsSection = document.getElementById("omissions-section");
   if (omissions.length) {
@@ -234,10 +311,9 @@ function renderSentiment(s) {
   if (!s) return;
 
   const badge = document.getElementById("sentiment-badge");
-  badge.textContent = s.label || "";
+  badge.textContent = titleCase(s.label) || "";
   badge.style.color = sentBadgeColor(s.label);
 
-  // Gauge: numeric -100…+100 → reveal % of gradient (0% = all dark = very negative)
   const numeric = typeof s.numeric === "number" ? s.numeric : (s.score || 0) * 100;
   const leftPct = clamp(((numeric + 100) / 200) * 100, 0, 100);
   document.getElementById("gauge-fill").style.left = `${leftPct}%`;
@@ -263,8 +339,7 @@ function renderFactCheck(fc) {
         <span class="verdict-tag ${escapeHtml(verdict)}">${escapeHtml(c.verdict || "unverifiable")}</span>
         <p class="claim-text">${escapeHtml(c.claim)}</p>
         <p class="claim-explanation">${escapeHtml(c.explanation || "")}</p>
-      </div>
-    `;
+      </div>`;
   }).join("");
 
   openAccordion(document.getElementById("acc-fact"));
@@ -275,50 +350,71 @@ function renderBroadenSection(items) {
   const section = document.getElementById("broaden-section");
   const grid    = document.getElementById("broaden-grid");
 
-  if (!items || !items.length) {
-    section.classList.add("hidden");
-    return;
-  }
+  if (!items || !items.length) { section.classList.add("hidden"); return; }
 
   section.classList.remove("hidden");
   grid.innerHTML = items.map(item => {
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.outlet + " " + item.angle)}`;
     return `
-    <div class="broaden-card">
-      <div class="broaden-card-top">
-        <span class="broaden-outlet">${escapeHtml(item.outlet)}</span>
-        <span class="perspective-tag ${escapeHtml((item.perspective || "").toLowerCase())}">
-          ${escapeHtml(item.perspective || "")}
-        </span>
-      </div>
-      <p class="broaden-angle">${escapeHtml(item.angle)}</p>
-      <p class="broaden-why">${escapeHtml(item.why)}</p>
-      <a class="broaden-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">Search on Google →</a>
-    </div>
-  `}).join("");
+      <div class="broaden-card">
+        <div class="broaden-card-top">
+          <span class="broaden-outlet">${escapeHtml(item.outlet)}</span>
+          <span class="perspective-tag ${escapeHtml((item.perspective || "").toLowerCase())}">
+            ${escapeHtml(item.perspective || "")}
+          </span>
+        </div>
+        <p class="broaden-angle">${escapeHtml(item.angle)}</p>
+        <p class="broaden-why">${escapeHtml(item.why)}</p>
+        <a class="broaden-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">Search on Google →</a>
+      </div>`;
+  }).join("");
 }
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 function leanBadgeColor(label) {
   const l = (label || "").toLowerCase();
-  if (l.includes("left"))  return "var(--cyan)";
+  if (l.includes("left"))  return "#22d3ee";
   if (l.includes("right")) return "#ef4444";
-  return "var(--muted)";
+  return "rgba(240,244,248,0.50)";
 }
-
 function sentBadgeColor(label) {
   const l = (label || "").toLowerCase();
-  if (l.includes("positive")) return "var(--green)";
+  if (l.includes("positive")) return "#10b981";
   if (l.includes("negative")) return "#ef4444";
-  return "var(--muted)";
+  return "rgba(240,244,248,0.50)";
 }
-
 function factBadgeColor(score) {
-  if (score == null) return "var(--muted)";
-  if (score >= 75) return "var(--green)";
-  if (score >= 50) return "#f59e0b";
+  if (score == null) return "rgba(240,244,248,0.50)";
+  if (score >= 80)   return "#10b981";
+  if (score >= 60)   return "#f59e0b";
   return "#ef4444";
 }
+
+// ── Back button ───────────────────────────────────────────────────────────────
+document.getElementById("back-btn").addEventListener("click", () => {
+  resultsSection.classList.add("hidden");
+  document.querySelector(".hero").classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+const compareBackBtn = document.getElementById("compare-back-btn");
+if (compareBackBtn) {
+  compareBackBtn.addEventListener("click", () => {
+    document.getElementById("compare-results").classList.add("hidden");
+    document.querySelector(".hero").classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+
+// ── Save to History button ────────────────────────────────────────────────────
+document.getElementById("save-btn").addEventListener("click", () => {
+  if (lastAnalyzedPayload) {
+    saveToHistory(lastAnalyzedPayload.data, lastAnalyzedUrl, "single");
+    const btn = document.getElementById("save-btn");
+    btn.textContent = "Saved ✓";
+    btn.classList.add("saved");
+  }
+});
 
 // ── Mode toggle ───────────────────────────────────────────────────────────────
 const singleInputCard  = document.getElementById("single-input-card");
@@ -354,12 +450,10 @@ function setCompareLoading(on) {
 
 async function compareArticles() {
   clearError();
-  const url1   = document.getElementById("url-input-1").value.trim();
-  const text1  = document.getElementById("text-input-1").value.trim();
-  const url2   = document.getElementById("url-input-2").value.trim();
-  const text2  = document.getElementById("text-input-2").value.trim();
-  const label1 = document.getElementById("source-name-1").value.trim() || "Article A";
-  const label2 = document.getElementById("source-name-2").value.trim() || "Article B";
+  const url1  = document.getElementById("url-input-1").value.trim();
+  const text1 = document.getElementById("text-input-1").value.trim();
+  const url2  = document.getElementById("url-input-2").value.trim();
+  const text2 = document.getElementById("text-input-2").value.trim();
 
   if (!url1 && !text1) { showError("Article A: please enter a URL or paste article text."); return; }
   if (!url2 && !text2) { showError("Article B: please enter a URL or paste article text."); return; }
@@ -386,10 +480,10 @@ async function compareArticles() {
     if (!payload.article1.success) { showError("Article 1: " + payload.article1.error); return; }
     if (!payload.article2.success) { showError("Article 2: " + payload.article2.error); return; }
 
-    renderCompareResults(payload.article1.data, payload.article2.data, label1, label2);
+    renderCompareResults(payload.article1.data, payload.article2.data, "Article A", "Article B");
   } catch (err) {
     if (err.name === "TypeError" && err.message.includes("fetch")) {
-      showError("Cannot reach the backend. Make sure the FastAPI server is running on port 8000.");
+      showError("Cannot reach the backend. Make sure the FastAPI server is running.");
     } else {
       showError("Unexpected error: " + err.message);
     }
@@ -405,7 +499,6 @@ function renderCompareResults(d1, d2, label1 = "Article A", label2 = "Article B"
   const cols = document.getElementById("compare-columns");
   cols.innerHTML = buildCompareCol(d1, "1", label1) + buildCompareCol(d2, "2", label2);
 
-  // Wire accordion toggles for the newly injected HTML
   cols.querySelectorAll(".accordion").forEach(acc => {
     const header = acc.querySelector(".accordion-header");
     header.addEventListener("click", () => toggleAccordion(acc));
@@ -414,8 +507,9 @@ function renderCompareResults(d1, d2, label1 = "Article A", label2 = "Article B"
     });
   });
 
+  document.querySelector(".hero").classList.add("hidden");
   compareResults.classList.remove("hidden");
-  compareResults.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function buildCompareCol(data, n, label) {
@@ -427,6 +521,7 @@ function buildCompareCol(data, n, label) {
   const pct      = clamp(((numeric / 10 + 1) / 2) * 100, 2, 98);
   const sentNum  = typeof s.numeric === "number" ? s.numeric : 0;
   const gaugePct = clamp(((sentNum + 100) / 200) * 100, 0, 100);
+  const dotBg    = leanBadgeColor(pl.label);
 
   const claims = (fc.claims || []).map(c => {
     const v = (c.verdict || "unverifiable").toLowerCase();
@@ -448,16 +543,12 @@ function buildCompareCol(data, n, label) {
         ${escapeHtml(label)}
       </div>
 
-      <!-- summary -->
-      <div class="glass-card result-summary-card">
-        <p class="section-label">Summary</p>
-        <div class="summary-block">
-          ${typeTag}
-          <p class="body-text">${escapeHtml(data.summary || "")}</p>
-        </div>
+      <div class="summary-prose-card">
+        <div class="summary-prose-label">Summary</div>
+        ${typeTag}
+        <p class="summary-prose-text">${escapeHtml(data.summary || "")}</p>
       </div>
 
-      <!-- political lean -->
       <div class="accordion glass-card-sm" data-open="true">
         <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
           <div class="accordion-title-row">
@@ -470,7 +561,7 @@ function buildCompareCol(data, n, label) {
           <div class="spectrum-wrap">
             <div class="spectrum-bar">
               <div class="spectrum-track"></div>
-              <div class="spectrum-dot" style="left:calc(${pct}% - 6px)"></div>
+              <div class="spectrum-dot" style="left:calc(${pct}% - 9px);background:${dotBg}"></div>
             </div>
             <div class="spectrum-labels"><span>Left</span><span>Center</span><span>Right</span></div>
           </div>
@@ -479,7 +570,6 @@ function buildCompareCol(data, n, label) {
         </div>
       </div>
 
-      <!-- sentiment -->
       <div class="accordion glass-card-sm" data-open="true">
         <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
           <div class="accordion-title-row">
@@ -499,7 +589,6 @@ function buildCompareCol(data, n, label) {
         </div>
       </div>
 
-      <!-- fact check -->
       <div class="accordion glass-card-sm" data-open="true">
         <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
           <div class="accordion-title-row">
@@ -513,9 +602,214 @@ function buildCompareCol(data, n, label) {
           <div class="claim-list">${claims}</div>
         </div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
+
+// ── History (localStorage) ────────────────────────────────────────────────────
+const HISTORY_KEY = "veris_history";
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
+}
+
+function saveToHistory(data, url, type = "single") {
+  if (!data) return;
+  const pl = data.political_lean || {};
+  const fc = data.fact_check     || {};
+  const s  = data.sentiment      || {};
+
+  let source = "Unknown";
+  if (url) {
+    try { source = new URL(url).hostname.replace(/^www\./, ""); } catch (_) {}
+  }
+
+  const item = {
+    id:          Date.now().toString(),
+    date:        new Date().toISOString(),
+    type,
+    url,
+    source,
+    lean:        pl.label || "Unknown",
+    lean_numeric: typeof pl.numeric === "number" ? pl.numeric : 0,
+    sentiment:   s.label || "Unknown",
+    fact_score:  fc.score != null ? fc.score : null,
+    article_type: data.article_type || "",
+    summary:     (data.summary || "").substring(0, 200),
+  };
+
+  const history = getHistory();
+  history.unshift(item);
+  if (history.length > 100) history.pop();
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+// ── History page render ───────────────────────────────────────────────────────
+function renderHistoryPage() {
+  const history = getHistory();
+  const listEl  = document.getElementById("history-list");
+  if (!listEl) return;
+
+  if (!history.length) {
+    listEl.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-icon">📰</div>
+        <p>No analyses yet. Analyze an article to see it here.</p>
+      </div>`;
+    return;
+  }
+
+  const grouped = groupByDate(history);
+  listEl.innerHTML = grouped.map(({ label, items }) => `
+    <div class="history-group-label">${label}</div>
+    ${items.map(item => buildHistoryItem(item)).join("")}
+  `).join("");
+}
+
+function groupByDate(items) {
+  const today     = new Date(); today.setHours(0,0,0,0);
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+
+  const groups = { Today: [], Yesterday: [], Earlier: [] };
+  items.forEach(item => {
+    const d = new Date(item.date); d.setHours(0,0,0,0);
+    if (d.getTime() === today.getTime())     groups.Today.push(item);
+    else if (d.getTime() === yesterday.getTime()) groups.Yesterday.push(item);
+    else groups.Earlier.push(item);
+  });
+
+  return Object.entries(groups)
+    .filter(([, v]) => v.length)
+    .map(([label, items]) => ({ label, items }));
+}
+
+function buildHistoryItem(item) {
+  const leanClass = (item.lean || "").toLowerCase().includes("left")  ? "left"
+                  : (item.lean || "").toLowerCase().includes("right") ? "right"
+                  : "center";
+  const dateStr = new Date(item.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const icon    = item.type === "compare" ? "⇄" : "≡";
+  const factTag = item.fact_score != null
+    ? `<span class="fact-pill">${item.fact_score}/100</span>` : "";
+
+  return `
+    <div class="history-item">
+      <div class="history-item-icon ${item.type}">${icon}</div>
+      <div class="history-item-body">
+        <div class="history-item-title">${escapeHtml(item.source || "Article")}</div>
+        <div class="history-item-meta">${escapeHtml(item.source)} · ${dateStr}</div>
+      </div>
+      <div class="history-item-badges">
+        <span class="lean-badge ${leanClass}">${escapeHtml(item.lean)}</span>
+        ${factTag}
+      </div>
+    </div>`;
+}
+
+// History search filter
+document.getElementById("history-search").addEventListener("input", function () {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll(".history-item").forEach(el => {
+    const text = el.textContent.toLowerCase();
+    el.style.display = text.includes(q) ? "" : "none";
+  });
+});
+
+// ── Account page render ───────────────────────────────────────────────────────
+function renderAccountPage() {
+  const history  = getHistory();
+  const total    = history.length;
+  const thisMonth = history.filter(h => {
+    const d = new Date(h.date);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  // Stat grid
+  const statGrid = document.getElementById("stat-grid");
+  if (statGrid) {
+    statGrid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Analyses</div>
+        <div class="stat-value" style="color:#22d3ee">${thisMonth}</div>
+        <div class="stat-sub">this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Saved Total</div>
+        <div class="stat-value" style="color:#10b981">${total}</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Lean</div>
+        <div class="stat-value" style="font-size:20px;color:#a855f7">${topLean(history)}</div>
+        <div class="stat-sub">most common</div>
+      </div>`;
+  }
+
+  // Top sources
+  const topSourcesEl = document.getElementById("top-sources");
+  if (topSourcesEl) {
+    const counts = {};
+    const leans  = {};
+    history.forEach(h => {
+      counts[h.source] = (counts[h.source] || 0) + 1;
+      leans[h.source]  = h.lean;
+    });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (!sorted.length) {
+      topSourcesEl.innerHTML = `<div class="source-row"><span class="source-row-name" style="color:var(--muted)">No data yet</span></div>`;
+    } else {
+      topSourcesEl.innerHTML = sorted.map(([src, count]) => {
+        const lean = leans[src] || "";
+        const leanClass = lean.toLowerCase().includes("left")  ? "left"
+                        : lean.toLowerCase().includes("right") ? "right" : "center";
+        return `
+          <div class="source-row">
+            <span class="source-row-name">${escapeHtml(src)}</span>
+            <div class="source-row-meta">
+              <span class="source-row-count">${count} ${count === 1 ? "analysis" : "analyses"}</span>
+              <span class="lean-badge ${leanClass}">${escapeHtml(lean)}</span>
+            </div>
+          </div>`;
+      }).join("");
+    }
+  }
+
+  // Plan usage bars from real data
+  const usageEl = document.getElementById("usage-analyses");
+  if (usageEl) usageEl.textContent = `${thisMonth} / 100`;
+  const fillEl = document.getElementById("fill-analyses");
+  if (fillEl) fillEl.style.width = `${Math.min(thisMonth, 100)}%`;
+  const savedEl = document.getElementById("usage-saved");
+  if (savedEl) savedEl.textContent = `${total} / 200`;
+  const fillSaved = document.getElementById("fill-saved");
+  if (fillSaved) fillSaved.style.width = `${Math.min((total / 200) * 100, 100)}%`;
+}
+
+function topLean(history) {
+  const counts = {};
+  history.forEach(h => { if (h.lean) counts[h.lean] = (counts[h.lean] || 0) + 1; });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  return sorted.length ? sorted[0][0] : "—";
+}
+
+// Account tab switching
+document.querySelectorAll(".account-nav-item").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".account-nav-item").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".account-tab").forEach(t => t.classList.add("hidden"));
+    const tab = document.getElementById("tab-" + btn.dataset.tab);
+    if (tab) tab.classList.remove("hidden");
+  });
+});
+
+// Toggle switches
+document.querySelectorAll(".toggle").forEach(toggle => {
+  toggle.addEventListener("click", () => {
+    const on = toggle.dataset.on === "true";
+    toggle.dataset.on = String(!on);
+  });
+});
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 urlInput.addEventListener("keydown",  e => { if (e.key === "Enter") analyzeArticle(); });
