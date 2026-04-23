@@ -626,6 +626,93 @@ function showAnonLimitMessage() {
 
 function showAccountSettings() {
   if (typeof showPage === 'function') showPage('account');
+  loadAccountUsage();
+}
+
+// ── Account page ──────────────────────────────────────────────────────────────
+function initAccountPage() {
+  document.querySelectorAll('.side-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const sec = item.dataset.accsec;
+      document.querySelectorAll('.side-nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      document.querySelectorAll('.account-section').forEach(s => s.classList.add('hidden'));
+      const target = document.getElementById(`accsec-${sec}`);
+      if (target) target.classList.remove('hidden');
+    });
+  });
+
+  const signoutBtn = document.getElementById('account-signout-btn');
+  if (signoutBtn) signoutBtn.addEventListener('click', () => {
+    if (typeof authSignOut === 'function') authSignOut();
+  });
+
+  const deleteBtn = document.getElementById('delete-account-btn');
+  if (deleteBtn) deleteBtn.addEventListener('click', confirmDeleteAccount);
+
+  const upgradeBtn = document.getElementById('account-upgrade-btn');
+  if (upgradeBtn) upgradeBtn.addEventListener('click', () => {
+    if (typeof startCheckout === 'function') {
+      startCheckout();
+    } else {
+      // Fallback: existing upgrade flow
+      const btn = document.getElementById('upgrade-btn');
+      if (btn) btn.click();
+    }
+  });
+}
+
+async function loadAccountUsage() {
+  const session = typeof getSession === 'function' ? getSession() : null;
+  if (!session) return;
+
+  const email   = session.user.email;
+  const initial = email[0].toUpperCase();
+  const nameParts = email.split('@')[0].replace(/[._]/g, ' ');
+
+  const avatarEl = document.getElementById('profile-avatar');
+  const nameEl   = document.getElementById('profile-name');
+  const emailEl  = document.getElementById('profile-email');
+  if (avatarEl) avatarEl.textContent = initial;
+  if (nameEl)   nameEl.textContent   = nameParts;
+  if (emailEl)  emailEl.textContent  = email;
+
+  try {
+    const token = typeof getToken === 'function' ? getToken() : null;
+    if (!token) return;
+    const res = await fetch(`${API_BASE}/auth/usage`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const { analyses_this_month, limit, tier } = await res.json();
+
+    const statAnalyses = document.getElementById('stat-analyses');
+    const statTier     = document.getElementById('stat-tier');
+    const statLimit    = document.getElementById('stat-limit');
+    if (statAnalyses) statAnalyses.textContent = analyses_this_month ?? '—';
+    if (statTier)     statTier.textContent     = tier === 'paid' ? 'Pro' : 'Free';
+    if (statLimit)    statLimit.textContent    = limit ?? '—';
+
+    const pct = limit > 0 ? Math.min(100, ((analyses_this_month || 0) / limit) * 100) : 0;
+    const fill = document.getElementById('usage-bar-fill');
+    const count = document.getElementById('usage-bar-count');
+    if (fill)  fill.style.width   = `${pct.toFixed(1)}%`;
+    if (count) count.textContent  = `${analyses_this_month ?? 0} / ${limit ?? '—'}`;
+
+    const isPaid = tier === 'paid';
+    const planBadge = document.getElementById('plan-badge');
+    const planTitle = document.getElementById('plan-info-title');
+    const planDesc  = document.getElementById('plan-info-desc');
+    const upgradeBtn = document.getElementById('account-upgrade-btn');
+    if (planBadge) planBadge.textContent = isPaid ? '✦ Pro Plan' : 'Free Plan';
+    if (planTitle) planTitle.textContent = isPaid ? '✦ Pro Plan — $7.99/month' : 'Free Plan';
+    if (planDesc)  planDesc.textContent  = isPaid
+      ? '30 analyses per month. Thank you for supporting Veris!'
+      : '3 analyses per month. Upgrade for 30 analyses/month.';
+    if (upgradeBtn) upgradeBtn.style.display = isPaid ? 'none' : '';
+  } catch (e) {
+    console.error('Failed to load usage:', e);
+  }
 }
 
 async function confirmDeleteAccount() {
@@ -678,10 +765,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (page === 'account') {
         const session = typeof getSession === 'function' ? getSession() : null;
         if (!session) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+        showPage('account');
+        loadAccountUsage();
+        return;
       }
       showPage(page);
     });
   });
+
+  initAccountPage();
 
   const logoLink = document.getElementById('nav-logo-link');
   if (logoLink) logoLink.addEventListener('click', e => { e.preventDefault(); showPage('home'); });

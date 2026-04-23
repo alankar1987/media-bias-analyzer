@@ -299,7 +299,80 @@
     </section>
 
     <section class="page-section" id="page-account" hidden>
-      <!-- Content added in Task 9 -->
+      <div class="page-header" style="padding-bottom:0">
+        <div class="page-title">Account</div>
+      </div>
+
+      <div class="account-grid" style="padding-top:24px">
+        <!-- Sidebar -->
+        <div class="account-sidebar">
+          <div class="profile-card">
+            <div class="profile-avatar" id="profile-avatar">?</div>
+            <div class="profile-name" id="profile-name">—</div>
+            <div class="profile-email" id="profile-email">—</div>
+            <div class="plan-badge" id="plan-badge">Free Plan</div>
+          </div>
+
+          <div class="side-nav">
+            <div class="side-nav-item active" data-accsec="overview">Overview</div>
+            <div class="side-nav-item" data-accsec="plan">Plan &amp; Usage</div>
+            <div class="side-nav-item" data-accsec="danger">Danger Zone</div>
+          </div>
+
+          <button class="logout-btn" id="account-signout-btn">Sign Out</button>
+        </div>
+
+        <!-- Main -->
+        <div class="account-main">
+          <!-- Overview -->
+          <div class="account-section" id="accsec-overview">
+            <div class="section-title">Your Activity</div>
+            <div class="stat-grid" id="account-stat-grid">
+              <div class="stat-card">
+                <div class="stat-label">Analyses</div>
+                <div class="stat-value val-cyan" id="stat-analyses">—</div>
+                <div class="stat-sub">this month</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Plan</div>
+                <div class="stat-value val-purple" id="stat-tier">—</div>
+                <div class="stat-sub">current plan</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Limit</div>
+                <div class="stat-value val-green" id="stat-limit">—</div>
+                <div class="stat-sub">analyses / month</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Plan & Usage -->
+          <div class="account-section hidden" id="accsec-plan">
+            <div class="section-title">Plan &amp; Usage</div>
+            <div class="usage-bar-wrap">
+              <div class="usage-bar-label">
+                <span>Monthly analyses</span>
+                <span id="usage-bar-count" style="color:var(--text)">— / —</span>
+              </div>
+              <div class="usage-bar-track">
+                <div class="usage-bar-fill" id="usage-bar-fill" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="plan-info-box">
+              <div class="plan-info-title" id="plan-info-title">Free Plan</div>
+              <div class="plan-info-desc" id="plan-info-desc">3 analyses per month.</div>
+            </div>
+            <button class="cta-btn" id="account-upgrade-btn" style="margin-top:16px">Upgrade to Pro — $7.99/month</button>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="account-section hidden" id="accsec-danger">
+            <div class="section-title">Danger Zone</div>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:20px">Permanently delete your account and all saved history. This cannot be undone.</p>
+            <button class="danger-btn" id="delete-account-btn">Delete my account</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Upgrade modal -->
