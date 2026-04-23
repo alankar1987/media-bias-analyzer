@@ -9,3 +9,9 @@ backend/__pycache__/
 .DS_Store
 .claude/settings.local.json
 .superpowers/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
