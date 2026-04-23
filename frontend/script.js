@@ -349,28 +349,35 @@ function factBadgeColor(score) {
   return "#ef4444";
 }
 
-// ── Mode toggle ───────────────────────────────────────────────────────────────
+// ── Mode toggle (legacy — replaced by tab-row in Task 4) ─────────────────────
 const singleInputCard  = document.getElementById("single-input-card");
 const compareInputCard = document.getElementById("compare-input-card");
 const compareResults   = document.getElementById("compare-results");
 
-document.getElementById("mode-single").addEventListener("click", function () {
-  this.classList.add("active");
-  document.getElementById("mode-compare").classList.remove("active");
-  singleInputCard.classList.remove("hidden");
-  compareInputCard.classList.add("hidden");
-  compareResults.classList.add("hidden");
-  clearError();
-});
+const modeSingleBtn  = document.getElementById("mode-single");
+const modeCompareBtn = document.getElementById("mode-compare");
 
-document.getElementById("mode-compare").addEventListener("click", function () {
-  this.classList.add("active");
-  document.getElementById("mode-single").classList.remove("active");
-  compareInputCard.classList.remove("hidden");
-  singleInputCard.classList.add("hidden");
-  resultsSection.classList.add("hidden");
-  clearError();
-});
+if (modeSingleBtn) {
+  modeSingleBtn.addEventListener("click", function () {
+    this.classList.add("active");
+    if (modeCompareBtn) modeCompareBtn.classList.remove("active");
+    if (singleInputCard) singleInputCard.classList.remove("hidden");
+    if (compareInputCard) compareInputCard.classList.add("hidden");
+    if (compareResults) compareResults.classList.add("hidden");
+    clearError();
+  });
+}
+
+if (modeCompareBtn) {
+  modeCompareBtn.addEventListener("click", function () {
+    this.classList.add("active");
+    if (modeSingleBtn) modeSingleBtn.classList.remove("active");
+    if (compareInputCard) compareInputCard.classList.remove("hidden");
+    if (singleInputCard) singleInputCard.classList.add("hidden");
+    resultsSection.classList.add("hidden");
+    clearError();
+  });
+}
 
 // ── Compare ───────────────────────────────────────────────────────────────────
 const compareBtn = document.getElementById("compare-btn");
@@ -583,20 +590,7 @@ function showAnonLimitMessage() {
 }
 
 function showAccountSettings() {
-  document.getElementById('account-modal').hidden = false;
-  const dropdown = document.getElementById('auth-dropdown');
-  if (dropdown) dropdown.setAttribute('hidden', '');
-  const token = typeof getToken === 'function' ? getToken() : null;
-  if (token) {
-    fetch(`${API_BASE}/auth/usage`, { headers: { 'Authorization': `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(data => {
-        document.getElementById('account-usage-info').textContent =
-          `${data.analyses_this_month} / ${data.limit} analyses used this month (${data.tier} plan)`;
-      })
-      .catch(() => {});
-  }
-  document.getElementById('delete-account-btn').onclick = confirmDeleteAccount;
+  if (typeof showPage === 'function') showPage('account');
 }
 
 async function confirmDeleteAccount() {
@@ -608,7 +602,6 @@ async function confirmDeleteAccount() {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` },
     });
-    document.getElementById('account-modal').hidden = true;
     if (typeof authSignOut === 'function') await authSignOut();
     if (typeof showToast === 'function') showToast('Your account has been deleted.', 'info');
   } catch {
