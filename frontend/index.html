@@ -23,17 +23,21 @@
 
     <div class="container">
 
-      <!-- ── Header ─────────────────────────────────────────────────── -->
-      <header class="site-header">
-        <div class="logo">
-          <img src="assets/veris-logo-dark.svg" alt="veris.news" class="logo-img" />
+      <nav>
+        <a class="nav-logo" href="#" id="nav-logo-link">
+          <img src="assets/veris-logo-dark.svg" alt="veris.news" style="height:28px;width:auto;" />
+        </a>
+        <div class="nav-links">
+          <button class="nav-link active" data-page="home">Analyze</button>
+          <button class="nav-link" data-page="history">My History</button>
+          <button class="nav-link" data-page="account">Account</button>
         </div>
-        <div class="mode-toggle">
-          <button class="mode-btn active" id="mode-single">Single Article</button>
-          <button class="mode-btn" id="mode-compare">Compare Two</button>
+        <div class="nav-right" id="nav-right">
+          <!-- Populated by auth.js -->
         </div>
-        <div id="auth-container"></div>
-      </header>
+      </nav>
+
+      <section class="page-section" id="page-home">
 
       <!-- ── Hero ───────────────────────────────────────────────────── -->
       <section class="hero">
@@ -237,28 +241,14 @@
         <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
       </section>
 
-    <!-- History view -->
-    <section id="history-view" hidden>
-      <div class="history-header">
-        <h2>My History</h2>
-        <button class="history-back-btn" onclick="hideHistoryView()">← Back</button>
-      </div>
+      </section><!-- /page-home -->
 
-      <!-- Stats row -->
-      <div class="history-stats" id="history-stats"></div>
+    <section class="page-section" id="page-history" hidden>
+      <!-- Content added in Task 8 -->
+    </section>
 
-      <!-- Card grid -->
-      <div class="history-grid" id="history-grid"></div>
-
-      <div style="text-align:center;margin-top:24px">
-        <button class="load-more-btn" id="history-load-more" hidden>Load more</button>
-      </div>
-
-      <!-- Expanded analysis drawer -->
-      <div class="history-drawer glass-card" id="history-drawer" hidden>
-        <button class="drawer-close" onclick="document.getElementById('history-drawer').hidden=true">✕ Close</button>
-        <div id="history-drawer-content"></div>
-      </div>
+    <section class="page-section" id="page-account" hidden>
+      <!-- Content added in Task 9 -->
     </section>
 
     <!-- Upgrade modal -->
@@ -272,16 +262,6 @@
         </div>
         <button class="cta-btn" id="upgrade-btn">Subscribe — $7.99/month</button>
         <button class="modal-cancel" onclick="document.getElementById('upgrade-modal').hidden=true">Maybe later</button>
-      </div>
-    </div>
-
-    <!-- Account settings modal -->
-    <div class="modal-overlay" id="account-modal" hidden>
-      <div class="modal-box glass-card">
-        <h3>Account Settings</h3>
-        <div id="account-usage-info" style="margin-bottom:16px;color:rgba(255,255,255,0.6);font-size:13px"></div>
-        <button class="modal-danger-btn" id="delete-account-btn">Delete my account</button>
-        <button class="modal-cancel" onclick="document.getElementById('account-modal').hidden=true">Close</button>
       </div>
     </div>
 

@@ -40,31 +40,23 @@ async function signOut() {
 }
 
 function renderAuthUI() {
-  const container = document.getElementById('auth-container');
+  const container = document.getElementById('nav-right');
   if (!container) return;
   if (_session) {
     const email = _session.user.email;
     const initial = email[0].toUpperCase();
-    container.innerHTML = `
-      <button class="auth-avatar" id="auth-menu-btn" title="${email}">${initial}</button>
-      <div class="auth-dropdown" id="auth-dropdown" hidden>
-        <span class="auth-email">${email}</span>
-        <button onclick="showHistoryView()">My History</button>
-        <button onclick="showAccountSettings()">Account Settings</button>
-        <button onclick="authSignOut()" class="auth-signout">Sign out</button>
-      </div>
-    `;
-    document.getElementById('auth-menu-btn').addEventListener('click', () => {
-      document.getElementById('auth-dropdown').toggleAttribute('hidden');
+    container.innerHTML = `<div class="nav-avatar" id="nav-avatar-btn" title="${email}">${initial}</div>`;
+    document.getElementById('nav-avatar-btn').addEventListener('click', () => {
+      if (typeof showPage === 'function') showPage('account');
     });
   } else {
-    container.innerHTML = `<button class="auth-signin-btn" onclick="signInWithGoogle()">Sign in with Google</button>`;
+    container.innerHTML = `<button class="nav-signin-btn" onclick="signInWithGoogle()">Sign in</button>`;
   }
 }
 
 async function authSignOut() {
   await signOut();
-  if (typeof hideHistoryView === 'function') hideHistoryView();
+  if (typeof showPage === 'function') showPage('home');
 }
 
 function showToast(message, type = 'info') {

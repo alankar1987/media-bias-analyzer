@@ -4,6 +4,17 @@
 
 const API_BASE = "https://media-bias-analyzer-production.up.railway.app";
 
+// ── Page routing ──────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page-section').forEach(s => {
+    s.hidden = s.id !== `page-${name}`;
+  });
+  document.querySelectorAll('.nav-link').forEach(l => {
+    l.classList.toggle('active', l.dataset.page === name);
+  });
+  if (name !== 'results') window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const urlInput       = document.getElementById("url-input");
 const textInput      = document.getElementById("text-input");
@@ -612,3 +623,32 @@ analyzeBtn.addEventListener("click", analyzeArticle);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initAccordions();
+
+document.addEventListener('DOMContentLoaded', () => {
+  // ── Nav link routing ──
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = btn.dataset.page;
+      if (page === 'history') {
+        const session = typeof getSession === 'function' ? getSession() : null;
+        if (!session) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+        showPage('history');
+        if (typeof loadHistory === 'function') {
+          const list = document.getElementById('history-list');
+          if (list) list.innerHTML = '';
+          if (typeof _historyOffset !== 'undefined') _historyOffset = 0;
+          loadHistory();
+        }
+        return;
+      }
+      if (page === 'account') {
+        const session = typeof getSession === 'function' ? getSession() : null;
+        if (!session) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+      }
+      showPage(page);
+    });
+  });
+
+  const logoLink = document.getElementById('nav-logo-link');
+  if (logoLink) logoLink.addEventListener('click', e => { e.preventDefault(); showPage('home'); });
+});

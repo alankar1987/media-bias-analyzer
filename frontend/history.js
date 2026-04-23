@@ -4,26 +4,15 @@ let _historyOffset = 0;
 const _PAGE_SIZE = 20;
 
 function showHistoryView() {
-  document.getElementById('history-view').hidden = false;
-  const hero = document.querySelector('.hero');
-  if (hero) hero.hidden = true;
-  const results = document.getElementById('results');
-  if (results) results.classList.add('hidden');
-  const compareResults = document.getElementById('compare-results');
-  if (compareResults) compareResults.classList.add('hidden');
-  const dropdown = document.getElementById('auth-dropdown');
-  if (dropdown) dropdown.setAttribute('hidden', '');
+  if (typeof showPage === 'function') showPage('history');
   _historyOffset = 0;
-  document.getElementById('history-grid').innerHTML = '';
-  document.getElementById('history-stats').innerHTML = '';
-  document.getElementById('history-drawer').hidden = true;
+  const list = document.getElementById('history-list');
+  if (list) list.innerHTML = '';
   loadHistory();
 }
 
 function hideHistoryView() {
-  document.getElementById('history-view').hidden = true;
-  const hero = document.querySelector('.hero');
-  if (hero) hero.hidden = false;
+  if (typeof showPage === 'function') showPage('home');
 }
 
 async function loadHistory() {
