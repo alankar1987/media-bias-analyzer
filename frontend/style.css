@@ -172,7 +172,7 @@ nav {
   grid-template-columns: 1fr 1fr;
   gap: 56px;
   align-items: start;
-  padding: 72px 0 56px;
+  padding: 32px 0 56px;
 }
 .hero-left { display: flex; flex-direction: column; }
 
@@ -267,7 +267,7 @@ nav {
 }
 
 /* ── Input col ─────────────────────────────────────────────────────────── */
-.input-col { position: sticky; top: 80px; }
+.input-col { }
 
 /* ── Input card ─────────────────────────────────────────────────────────── */
 .input-card {
