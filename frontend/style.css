@@ -272,11 +272,12 @@ nav {
 /* ── Input card ─────────────────────────────────────────────────────────── */
 .input-card {
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: rgba(14,17,23,0.8);
+  border: 1px solid rgba(34,211,238,0.18);
+  background: linear-gradient(180deg, rgba(18,22,32,0.92), rgba(14,17,23,0.88));
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   padding: 28px;
+  box-shadow: 0 24px 48px -12px rgba(0,0,0,0.6), 0 0 60px -20px rgba(34,211,238,0.25);
 }
 .card-label {
   font-size: 11px;
