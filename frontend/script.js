@@ -611,22 +611,35 @@ function buildCompareCol(data, n, label) {
 }
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
+async function startCheckout() {
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (!token) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+  try {
+    const r = await fetch(`${API_BASE}/stripe/checkout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      console.error('Checkout error:', r.status, err);
+      if (typeof showToast === 'function') showToast(`Checkout failed (${r.status}). Stripe may not be configured.`, 'error');
+      return;
+    }
+    const { url } = await r.json();
+    if (!url) {
+      if (typeof showToast === 'function') showToast('Checkout returned no URL.', 'error');
+      return;
+    }
+    window.location.href = url;
+  } catch (e) {
+    console.error('Checkout exception:', e);
+    if (typeof showToast === 'function') showToast('Could not start checkout. Please try again.', 'error');
+  }
+}
+
 function showUpgradeModal() {
   document.getElementById('upgrade-modal').hidden = false;
-  document.getElementById('upgrade-btn').onclick = async () => {
-    const token = typeof getToken === 'function' ? getToken() : null;
-    if (!token) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
-    try {
-      const r = await fetch(`${API_BASE}/stripe/checkout`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      const { url } = await r.json();
-      window.location.href = url;
-    } catch {
-      showError('Could not start checkout. Please try again.');
-    }
-  };
+  document.getElementById('upgrade-btn').onclick = startCheckout;
 }
 
 function showAnonLimitMessage() {
@@ -662,15 +675,7 @@ function initAccountPage() {
   if (deleteBtn) deleteBtn.addEventListener('click', confirmDeleteAccount);
 
   const upgradeBtn = document.getElementById('account-upgrade-btn');
-  if (upgradeBtn) upgradeBtn.addEventListener('click', () => {
-    if (typeof startCheckout === 'function') {
-      startCheckout();
-    } else {
-      // Fallback: existing upgrade flow
-      const btn = document.getElementById('upgrade-btn');
-      if (btn) btn.click();
-    }
-  });
+  if (upgradeBtn) upgradeBtn.addEventListener('click', startCheckout);
 }
 
 async function loadAccountUsage() {
