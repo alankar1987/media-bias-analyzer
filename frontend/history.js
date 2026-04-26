@@ -47,6 +47,26 @@ function escapeH(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+async function openHistoryItem(id) {
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE_H}/auth/history/${id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const row = await res.json();
+    const payload = {
+      data: row.result_json,
+      source_url: row.url,
+    };
+    if (typeof showPage === 'function') showPage('home');
+    if (typeof renderResults === 'function') renderResults(payload);
+  } catch (e) {
+    console.error('Failed to open analysis:', e);
+  }
+}
+
 function leanBadgeClass(lean) {
   if (!lean) return 'h-badge h-badge-center';
   const l = lean.toLowerCase();
@@ -111,9 +131,7 @@ function renderCards(items) {
         </div>
         <div class="history-badges">${leanPill}${factScorePill}</div>
       `;
-      itemEl.addEventListener('click', () => {
-        console.log('Open analysis:', item.id);
-      });
+      itemEl.addEventListener('click', () => openHistoryItem(item.id));
       groupDiv.appendChild(itemEl);
     });
     list.appendChild(groupDiv);

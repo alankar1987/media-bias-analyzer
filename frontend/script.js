@@ -145,7 +145,7 @@ async function analyzeArticle() {
     renderResults(payload);
   } catch (err) {
     if (err.name === "TypeError" && err.message.includes("fetch")) {
-      showError("Cannot reach the backend. Make sure the FastAPI server is running on port 8000.");
+      showError(`Cannot reach the backend at ${API_BASE}. Check your network or try again.`);
     } else {
       showError("Unexpected error: " + err.message);
     }
@@ -188,7 +188,13 @@ function renderResultsHeader(data, sourceUrl) {
   const titleEl = document.getElementById('results-title');
   const metaEl  = document.getElementById('results-meta');
   const fallbackTitle = hostFromUrl(sourceUrl) || 'Pasted article';
-  if (titleEl) titleEl.textContent = source.headline || fallbackTitle;
+  if (titleEl) {
+    if (sourceUrl) {
+      titleEl.innerHTML = `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="results-title-link">${escapeHtml(source.headline || fallbackTitle)} <span class="ext-arrow">↗</span></a>`;
+    } else {
+      titleEl.textContent = source.headline || fallbackTitle;
+    }
+  }
   if (metaEl) {
     const parts = [source.outlet, data.date, data.article_type].filter(Boolean);
     metaEl.innerHTML = parts.map((p, i) =>
@@ -485,7 +491,7 @@ async function compareArticles() {
     renderCompareResults(payload.article1.data, payload.article2.data, label1, label2);
   } catch (err) {
     if (err.name === "TypeError" && err.message.includes("fetch")) {
-      showError("Cannot reach the backend. Make sure the FastAPI server is running on port 8000.");
+      showError(`Cannot reach the backend at ${API_BASE}. Check your network or try again.`);
     } else {
       showError("Unexpected error: " + err.message);
     }

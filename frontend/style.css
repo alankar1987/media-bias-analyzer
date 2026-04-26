@@ -470,6 +470,17 @@ nav {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.results-title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color .15s;
+}
+.results-title-link:hover { color: var(--cyan); }
+.ext-arrow {
+  font-size: 14px;
+  opacity: .5;
+  margin-left: 4px;
+}
 .results-meta {
   font-size: 13px;
   color: var(--muted);
