@@ -23,6 +23,7 @@ def save_analysis(
     fact_score: Optional[int],
     result_json: dict,
     article_text: str,
+    content_hash: Optional[str] = None,
 ) -> Optional[str]:
     """Insert analysis row. Returns the new row id, or None on failure (non-fatal)."""
     try:
@@ -36,11 +37,36 @@ def save_analysis(
             "fact_score": fact_score,
             "result_json": result_json,
             "article_text": article_text,
+            "content_hash": content_hash,
         }
         res = _supabase.table("analyses").insert(row).execute()
         return res.data[0]["id"] if res.data else None
     except Exception as exc:
         logger.error("Failed to save analysis: %s", exc)
+        return None
+
+
+def find_cached_analysis(content_hash: str, max_age_days: int = 30) -> Optional[dict]:
+    """Return the most recent result_json with this content_hash within max_age_days, else None."""
+    if not content_hash:
+        return None
+    try:
+        from datetime import datetime, timezone, timedelta
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+        res = (
+            _supabase.table("analyses")
+            .select("result_json")
+            .eq("content_hash", content_hash)
+            .gte("created_at", cutoff)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if res.data and res.data[0].get("result_json"):
+            return res.data[0]["result_json"]
+        return None
+    except Exception as exc:
+        logger.error("Failed to look up cache for %s: %s", content_hash, exc)
         return None
 
 

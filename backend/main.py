@@ -10,9 +10,11 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, model_validator
 from dotenv import load_dotenv
 
+import hashlib
+
 from analyzer import extract_text_from_url, analyze_content
 from auth import verify_jwt, get_quota, QuotaInfo
-from db import save_analysis, get_history, get_analysis, delete_user as db_delete_user
+from db import save_analysis, get_history, get_analysis, delete_user as db_delete_user, find_cached_analysis
 import stripe_client
 from rate_limit import get_limiter, ANON_COOKIE_NAME
 
@@ -326,14 +328,26 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
     if not article_text or len(article_text.strip()) < MIN_TEXT_LENGTH:
         raise HTTPException(status_code=422, detail=f"Article text must be at least {MIN_TEXT_LENGTH} characters.")
 
-    # ── 3. Analyse ──────────────────────────────────────────────────────────
-    try:
-        result = analyze_content(article_text, url=source_url)
-    except (ValueError, RuntimeError) as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-    except Exception as exc:
-        logger.error("Unexpected analysis error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
+    # ── 3. Cache lookup (only when URL provided — we don't cache pasted text) ──
+    content_hash = None
+    cached = False
+    if source_url:
+        content_hash = hashlib.sha256(article_text.strip().encode("utf-8")).hexdigest()
+        cached_result = find_cached_analysis(content_hash)
+        if cached_result is not None:
+            logger.info("Cache HIT for hash %s", content_hash[:12])
+            result = cached_result
+            cached = True
+
+    # ── 4. Analyse if no cache hit ──────────────────────────────────────────
+    if not cached:
+        try:
+            result = analyze_content(article_text, url=source_url)
+        except (ValueError, RuntimeError) as exc:
+            raise HTTPException(status_code=500, detail=str(exc))
+        except Exception as exc:
+            logger.error("Unexpected analysis error: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
 
     # ── 4. Save if logged in ────────────────────────────────────────────────
     if user:
@@ -360,12 +374,13 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
             fact_score=fc.get("score"),
             result_json=result,
             article_text=article_text[:5000],
+            content_hash=content_hash,
         ))
 
     preview_len = 300
     preview = article_text[:preview_len] + "…" if len(article_text) > preview_len else article_text
 
-    response = JSONResponse(content={"success": True, "data": result, "source_url": source_url, "text_preview": preview})
+    response = JSONResponse(content={"success": True, "data": result, "source_url": source_url, "text_preview": preview, "cached": cached})
 
     # Set anon cookie for first-time anonymous users
     if user is None:
