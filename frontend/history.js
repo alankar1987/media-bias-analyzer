@@ -1,4 +1,4 @@
-const API_BASE_H = typeof API_BASE !== 'undefined' ? API_BASE : 'https://media-bias-analyzer-production.up.railway.app';
+const API_BASE_H = typeof API_BASE !== 'undefined' ? API_BASE : 'https://media-bias-analyzer-production-cfdd.up.railway.app';
 
 let _historyOffset = 0;
 const _PAGE_SIZE = 20;

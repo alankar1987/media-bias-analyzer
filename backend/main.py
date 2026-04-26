@@ -46,7 +46,9 @@ app.add_middleware(
         "https://veris.news",
         "https://media-bias-analyzer.naik-alankar.workers.dev",
         "http://localhost:8787",
+        "http://localhost:8080",
     ],
+    allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
