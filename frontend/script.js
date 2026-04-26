@@ -709,11 +709,8 @@ async function loadAccountUsage() {
     const { analyses_this_month, limit, tier } = await res.json();
 
     const statAnalyses = document.getElementById('stat-analyses');
-    const statTier     = document.getElementById('stat-tier');
-    const statLimit    = document.getElementById('stat-limit');
     if (statAnalyses) statAnalyses.textContent = analyses_this_month ?? '—';
-    if (statTier)     statTier.textContent     = tier === 'paid' ? 'Pro' : 'Free';
-    if (statLimit)    statLimit.textContent    = limit ?? '—';
+    loadAccountSourcesAndCounts();
 
     const pct = limit > 0 ? Math.min(100, ((analyses_this_month || 0) / limit) * 100) : 0;
     const fill = document.getElementById('usage-bar-fill');
@@ -735,6 +732,73 @@ async function loadAccountUsage() {
   } catch (e) {
     console.error('Failed to load usage:', e);
   }
+}
+
+async function loadAccountSourcesAndCounts() {
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/history?offset=0&limit=50`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const { items } = await res.json();
+    const list = items || [];
+
+    const savedEl = document.getElementById('stat-saved');
+    if (savedEl) savedEl.textContent = list.length;
+
+    // Comparisons aren't tracked separately yet
+    const cmpEl = document.getElementById('stat-comparisons');
+    if (cmpEl) cmpEl.textContent = '—';
+
+    // Aggregate by source_name
+    const counts = {};
+    const leans = {};
+    list.forEach(item => {
+      const src = (item.source_name || '').trim();
+      if (!src) return;
+      counts[src] = (counts[src] || 0) + 1;
+      if (item.lean_label) {
+        if (!leans[src]) leans[src] = {};
+        leans[src][item.lean_label] = (leans[src][item.lean_label] || 0) + 1;
+      }
+    });
+    const top = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+    const wrap = document.getElementById('top-sources-list');
+    if (!wrap) return;
+    if (!top.length) {
+      wrap.innerHTML = '<div class="empty-text" style="padding:20px 0">Analyze a few articles to see your top sources.</div>';
+      return;
+    }
+    wrap.innerHTML = top.map(([src, count]) => {
+      const dom = leans[src]
+        ? Object.entries(leans[src]).sort((a,b) => b[1] - a[1])[0][0]
+        : null;
+      const cls = leanBadgeClassFor(dom);
+      const badge = dom ? `<span class="${cls}">${escapeHtml(dom)}</span>` : '';
+      return `
+        <div class="source-row">
+          <div>
+            <div class="source-row-name">${escapeHtml(src)}</div>
+            <div class="source-row-count">${count} analys${count === 1 ? 'is' : 'es'}</div>
+          </div>
+          <div>${badge}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load top sources:', e);
+  }
+}
+
+function leanBadgeClassFor(lean) {
+  if (!lean) return 'h-badge h-badge-center';
+  const l = lean.toLowerCase();
+  if (l.includes('left'))  return 'h-badge h-badge-left';
+  if (l.includes('right')) return 'h-badge h-badge-right';
+  return 'h-badge h-badge-center';
 }
 
 async function confirmDeleteAccount() {
