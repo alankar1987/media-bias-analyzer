@@ -188,11 +188,12 @@ function renderResultsHeader(data, sourceUrl) {
   const titleEl = document.getElementById('results-title');
   const metaEl  = document.getElementById('results-meta');
   const fallbackTitle = hostFromUrl(sourceUrl) || 'Pasted article';
+  const displayTitle = data.title || source.headline || fallbackTitle;
   if (titleEl) {
     if (sourceUrl) {
-      titleEl.innerHTML = `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="results-title-link">${escapeHtml(source.headline || fallbackTitle)} <span class="ext-arrow">↗</span></a>`;
+      titleEl.innerHTML = `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="results-title-link">${escapeHtml(displayTitle)} <span class="ext-arrow">↗</span></a>`;
     } else {
-      titleEl.textContent = source.headline || fallbackTitle;
+      titleEl.textContent = displayTitle;
     }
   }
   if (metaEl) {

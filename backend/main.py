@@ -339,13 +339,22 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
     if user:
         lean = result.get("political_lean", {})
         fc = result.get("fact_check", {})
-        source = result.get("source", {})
+        # Derive source_name from URL hostname (analyzer doesn't produce a source block)
+        derived_source = None
+        if source_url:
+            try:
+                from urllib.parse import urlparse
+                derived_source = urlparse(source_url).hostname
+                if derived_source and derived_source.startswith("www."):
+                    derived_source = derived_source[4:]
+            except Exception:
+                pass
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, lambda: save_analysis(
             user_id=user["id"],
             url=source_url,
-            source_name=source.get("outlet"),
-            headline=source.get("headline"),
+            source_name=derived_source,
+            headline=result.get("title"),
             lean_label=lean.get("label"),
             lean_numeric=lean.get("numeric"),
             fact_score=fc.get("score"),
