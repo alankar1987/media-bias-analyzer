@@ -51,10 +51,19 @@ def get_quota(user_id: str) -> QuotaInfo:
         )
         sub_data = sub_result.data[0] if sub_result.data else None
         if sub_data and sub_data.get("status") == "active":
+            # Active status from Stripe is sufficient — period_end is a refinement
+            # for catching expired-but-not-yet-canceled subs. If present, honor it;
+            # if absent (e.g., right after checkout.session.completed before the
+            # subscription.updated webhook arrives), trust the active status.
             period_end = sub_data.get("current_period_end")
-            if period_end:
-                pe = datetime.fromisoformat(period_end.replace("Z", "+00:00"))
-                if pe > now:
+            if not period_end:
+                tier = "paid"
+            else:
+                try:
+                    pe = datetime.fromisoformat(period_end.replace("Z", "+00:00"))
+                    if pe > now:
+                        tier = "paid"
+                except Exception:
                     tier = "paid"
     except Exception:
         pass
