@@ -2,7 +2,7 @@
    Veris — Media Bias Analyzer  |  script.js
    ============================================================ */
 
-const API_BASE = "https://media-bias-analyzer-production-cfdd.up.railway.app";
+const API_BASE = "https://media-bias-analyzer-production.up.railway.app";
 
 // ── Page routing ──────────────────────────────────────────────────────────────
 function showPage(name) {
