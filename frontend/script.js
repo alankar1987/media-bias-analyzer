@@ -4,9 +4,16 @@
 
 const API_BASE = "https://media-bias-analyzer-production.up.railway.app";
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let lastAnalyzedUrl     = "";
-let lastAnalyzedPayload = null;
+// ── Page routing ──────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page-section').forEach(s => {
+    s.hidden = s.id !== `page-${name}`;
+  });
+  document.querySelectorAll('.nav-link').forEach(l => {
+    l.classList.toggle('active', l.dataset.page === name);
+  });
+  if (name !== 'results') window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const urlInput       = document.getElementById("url-input");
@@ -29,11 +36,6 @@ function escapeHtml(str) {
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-function titleCase(str) {
-  if (!str) return str;
-  return str.replace(/\b\w/g, c => c.toUpperCase());
-}
-
 function showError(msg) {
   errorText.textContent = msg;
   errorBanner.classList.remove("hidden");
@@ -48,33 +50,22 @@ function clearError() {
 function setLoading(on) {
   analyzeBtn.classList.toggle("loading", on);
   analyzeBtn.disabled = on;
-  analyzeBtn.querySelector(".btn-label").textContent = on ? "Analyzing…" : "Analyze Article";
+  const label = analyzeBtn.querySelector(".btn-label");
+  if (!label) return;
+  if (on) {
+    label.textContent = _activeMode === 'compare' ? "Comparing…" : "Analyzing…";
+  } else {
+    label.textContent = _activeMode === 'compare' ? "Compare Articles" : "Analyze Article";
+  }
 }
-
-// ── Navigation ────────────────────────────────────────────────────────────────
-function navigateTo(pageId) {
-  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
-  document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
-  const page = document.getElementById("page-" + pageId);
-  if (page) page.classList.remove("hidden");
-  const link = document.querySelector(`.nav-link[data-page="${pageId}"]`);
-  if (link) link.classList.add("active");
-
-  if (pageId === "history") renderHistoryPage();
-  if (pageId === "account") renderAccountPage();
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-document.querySelectorAll(".nav-link").forEach(btn => {
-  btn.addEventListener("click", () => navigateTo(btn.dataset.page));
-});
 
 // ── Accordion ─────────────────────────────────────────────────────────────────
 function initAccordions() {
   document.querySelectorAll(".accordion").forEach(acc => {
-    const header = acc.querySelector(".accordion-header");
-    header.addEventListener("click", () => toggleAccordion(acc));
-    header.addEventListener("keydown", e => {
+    const head = acc.querySelector(".acc-head");
+    if (!head) return;
+    head.addEventListener("click", () => toggleAccordion(acc));
+    head.addEventListener("keydown", e => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleAccordion(acc); }
     });
   });
@@ -82,17 +73,23 @@ function initAccordions() {
 
 function toggleAccordion(acc) {
   const isOpen = acc.dataset.open === "true";
-  const body   = acc.querySelector(".accordion-body");
-  const header = acc.querySelector(".accordion-header");
+  const body    = acc.querySelector(".acc-body");
+  const head    = acc.querySelector(".acc-head");
+  const chevron = acc.querySelector(".acc-chevron");
   acc.dataset.open = isOpen ? "false" : "true";
-  header.setAttribute("aria-expanded", String(!isOpen));
-  body.classList.toggle("hidden", isOpen);
+  if (head) head.setAttribute("aria-expanded", String(!isOpen));
+  if (body) body.classList.toggle("hidden", isOpen);
+  if (chevron) chevron.classList.toggle("open", !isOpen);
 }
 
 function openAccordion(acc) {
   acc.dataset.open = "true";
-  acc.querySelector(".accordion-header").setAttribute("aria-expanded", "true");
-  acc.querySelector(".accordion-body").classList.remove("hidden");
+  const head = acc.querySelector(".acc-head");
+  const body = acc.querySelector(".acc-body");
+  const chev = acc.querySelector(".acc-chevron");
+  if (head) head.setAttribute("aria-expanded", "true");
+  if (body) body.classList.remove("hidden");
+  if (chev) chev.classList.add("open");
 }
 
 // ── Analyze ───────────────────────────────────────────────────────────────────
@@ -106,7 +103,6 @@ async function analyzeArticle() {
     return;
   }
 
-  lastAnalyzedUrl = url;
   setLoading(true);
   resultsSection.classList.add("hidden");
 
@@ -115,11 +111,29 @@ async function analyzeArticle() {
     if (url)  body.url  = url;
     if (text) body.text = text;
 
+    const token = typeof getToken === 'function' ? getToken() : null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/analyze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers,
       body: JSON.stringify(body),
     });
+
+    if (res.status === 402) {
+      showUpgradeModal();
+      return;
+    }
+    if (res.status === 429) {
+      const body429 = await res.json();
+      if (body429.error === 'anon_limit') {
+        showAnonLimitMessage();
+      } else {
+        showError('Too many requests. Please try again later.');
+      }
+      return;
+    }
 
     const payload = await res.json();
 
@@ -128,12 +142,10 @@ async function analyzeArticle() {
       return;
     }
 
-    lastAnalyzedPayload = payload;
     renderResults(payload);
-    saveToHistory(payload.data, url, "single");
   } catch (err) {
     if (err.name === "TypeError" && err.message.includes("fetch")) {
-      showError("Cannot reach the backend. Make sure the FastAPI server is running.");
+      showError(`Cannot reach the backend at ${API_BASE}. Check your network or try again.`);
     } else {
       showError("Unexpected error: " + err.message);
     }
@@ -147,123 +159,127 @@ function renderResults(payload) {
   const data = payload.data;
   if (!data) { showError("No analysis data returned."); return; }
 
-  renderResultsHeader(data, lastAnalyzedUrl);
+  renderResultsHeader(data, payload.source_url);
   renderScoreCards(data);
-  renderSummaryBlock(data);
+  renderSummaryCard(data);
   renderPoliticalLean(data.political_lean);
   renderSentiment(data.sentiment);
   renderFactCheck(data.fact_check);
   renderBroadenSection(data.broaden_your_view);
 
-  const saveBtn = document.getElementById("save-btn");
-  if (saveBtn) {
-    saveBtn.classList.remove("saved");
-    saveBtn.textContent = "Save to History ✓";
-  }
+  const savedEl = document.getElementById('saved-indicator');
+  const loggedIn = typeof getSession === 'function' && getSession();
+  if (savedEl) savedEl.hidden = !loggedIn;
 
-  document.querySelector(".hero").classList.add("hidden");
+  const hero = document.querySelector('.hero');
+  if (hero) hero.style.display = 'none';
   resultsSection.classList.remove("hidden");
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // ── Results header ────────────────────────────────────────────────────────────
-function renderResultsHeader(data, url) {
-  let source = "Unknown source";
-  if (url) {
-    try { source = new URL(url).hostname.replace(/^www\./, ""); } catch (_) {}
+function hostFromUrl(u) {
+  if (!u) return '';
+  try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; }
+}
+
+function renderResultsHeader(data, sourceUrl) {
+  const source = data.source || {};
+  const titleEl = document.getElementById('results-title');
+  const metaEl  = document.getElementById('results-meta');
+  const fallbackTitle = hostFromUrl(sourceUrl) || 'Pasted article';
+  const displayTitle = data.title || source.headline || fallbackTitle;
+  if (titleEl) {
+    if (sourceUrl) {
+      titleEl.innerHTML = `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="results-title-link">${escapeHtml(displayTitle)} <span class="ext-arrow">↗</span></a>`;
+    } else {
+      titleEl.textContent = displayTitle;
+    }
   }
-  const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const articleType = data.article_type || "";
-
-  const titleEl = document.getElementById("results-title");
-  const metaEl  = document.getElementById("results-meta");
-  if (titleEl) titleEl.textContent = url ? source + " article" : "Article Analysis";
-
   if (metaEl) {
-    const parts = [escapeHtml(source), escapeHtml(date)];
-    if (articleType) parts.push(escapeHtml(articleType));
-    metaEl.innerHTML = parts
-      .map(p => `<span>${p}</span>`)
-      .join('<span class="meta-dot">·</span>');
+    const parts = [source.outlet, data.date, data.article_type].filter(Boolean);
+    metaEl.innerHTML = parts.map((p, i) =>
+      i < parts.length - 1
+        ? `<span>${escapeHtml(p)}</span><span class="results-meta-dot"></span>`
+        : `<span>${escapeHtml(p)}</span>`
+    ).join('');
   }
 }
 
-// ── Score cards ───────────────────────────────────────────────────────────────
+// ── Score cards row ───────────────────────────────────────────────────────────
 function renderScoreCards(data) {
   const pl = data.political_lean || {};
   const s  = data.sentiment      || {};
   const fc = data.fact_check     || {};
 
-  const leanNum  = typeof pl.numeric === "number" ? pl.numeric : 0;
-  const sentNum  = typeof s.numeric  === "number" ? s.numeric  : 0;
+  const leanNum = typeof pl.numeric === 'number' ? pl.numeric : 0;
   const leanSign = leanNum >= 0 ? `+${leanNum.toFixed(1)}` : leanNum.toFixed(1);
-  const sentSign = sentNum >= 0 ? `+${Math.round(sentNum)}` : String(Math.round(sentNum));
+  const leanVal  = document.getElementById('sc-lean-value');
+  const leanSub  = document.getElementById('sc-lean-sub');
+  if (leanVal) { leanVal.textContent = pl.label || '—'; leanVal.style.color = leanBadgeColor(pl.label); }
+  if (leanSub) leanSub.textContent = pl.label
+    ? `Score: ${leanSign} / 10 · ${pl.confidence || ''} confidence`
+    : '';
 
-  const leanColor = leanNum < -1 ? "#22d3ee" : leanNum > 1 ? "#ef4444" : "rgba(240,244,248,0.50)";
-  const sentColor = sentNum > 20  ? "#10b981" : sentNum < -20 ? "#ef4444" : "rgba(240,244,248,0.50)";
-  const factScore = fc.score != null ? fc.score : null;
-  const factColor = factScore === null ? "rgba(240,244,248,0.50)"
-                  : factScore >= 80   ? "#10b981"
-                  : factScore >= 60   ? "#f59e0b"
-                  : "#ef4444";
-  const factReliability = factScore === null ? "No data"
-                        : factScore >= 80    ? "High reliability"
-                        : factScore >= 60    ? "Moderate reliability"
-                        : "Low reliability";
+  const sentNum = typeof s.numeric === 'number' ? s.numeric : 0;
+  const sentVal = document.getElementById('sc-sent-value');
+  const sentSub = document.getElementById('sc-sent-sub');
+  if (sentVal) { sentVal.textContent = s.label || '—'; sentVal.style.color = sentBadgeColor(s.label); }
+  if (sentSub) sentSub.textContent = s.label
+    ? `Score: ${sentNum >= 0 ? '+' : ''}${sentNum} / 100`
+    : '';
 
-  const row = document.getElementById("score-cards-row");
-  if (!row) return;
-  row.innerHTML = `
-    <div class="score-card">
-      <div class="score-card-label">Political Lean</div>
-      <div class="score-card-value" style="color:${leanColor}">${escapeHtml(titleCase(pl.label) || "—")}</div>
-      <div class="score-card-sub">Score: ${leanSign} / 10 · ${escapeHtml(titleCase(pl.confidence) || "N/A")}</div>
-    </div>
-    <div class="score-card">
-      <div class="score-card-label">Sentiment</div>
-      <div class="score-card-value" style="color:${sentColor}">${escapeHtml(titleCase(s.label) || "—")}</div>
-      <div class="score-card-sub">Score: ${sentSign} / 100</div>
-    </div>
-    <div class="score-card">
-      <div class="score-card-label">Fact Check</div>
-      <div class="score-card-value" style="color:${factColor}">${factScore !== null ? factScore + "/100" : "—"}</div>
-      <div class="score-card-sub">${factReliability}</div>
-    </div>
-  `;
+  const factVal = document.getElementById('sc-fact-value');
+  const factSub = document.getElementById('sc-fact-sub');
+  if (factVal) {
+    factVal.innerHTML = fc.score != null
+      ? `${fc.score}<span style="font-size:16px;font-weight:400;opacity:.5">/100</span>`
+      : '—';
+    factVal.style.color = factBadgeColor(fc.score);
+  }
+  if (factSub) {
+    const supported = (fc.claims || []).filter(c => (c.verdict || '').toLowerCase() === 'supported').length;
+    const disputed  = (fc.claims || []).filter(c => (c.verdict || '').toLowerCase() === 'disputed').length;
+    factSub.textContent = fc.score != null ? `${supported} supported · ${disputed} disputed` : '';
+  }
 }
 
-// ── Summary block ─────────────────────────────────────────────────────────────
-function renderSummaryBlock(data) {
-  const block = document.getElementById("summary-block");
-  if (!block) return;
-  const typeTag = data.article_type
-    ? `<span class="article-type-tag">${escapeHtml(data.article_type)}</span>`
-    : "";
-  block.innerHTML = `
-    <div class="summary-prose-label">Analysis Summary</div>
-    <p class="summary-prose-text">${escapeHtml(data.summary || "")}</p>
-    ${typeTag}
-  `;
+// ── Summary card ──────────────────────────────────────────────────────────────
+function renderSummaryCard(data) {
+  const typeTag = document.getElementById('article-type-tag');
+  if (typeTag) {
+    typeTag.textContent = data.article_type || '';
+    typeTag.style.display = data.article_type ? 'inline-block' : 'none';
+  }
+  const prose = document.getElementById('summary-prose-text');
+  if (prose) prose.textContent = data.summary || '';
 }
 
 // ── Political Lean accordion ──────────────────────────────────────────────────
 function renderPoliticalLean(pl) {
   if (!pl) return;
 
+  // Accordion badge
   const badge = document.getElementById("political-badge");
-  badge.textContent = titleCase(pl.label) || "";
+  badge.textContent = pl.label || "";
   badge.style.color = leanBadgeColor(pl.label);
 
+  // Spectrum dot  →  map numeric -10…+10 to 0%…100%
   const numeric = typeof pl.numeric === "number" ? pl.numeric : (pl.score || 0) * 10;
   const pct = clamp(((numeric / 10 + 1) / 2) * 100, 2, 98);
-  const dot = document.getElementById("spectrum-dot");
-  dot.style.left = `calc(${pct}% - 9px)`;
-  dot.style.background = leanBadgeColor(pl.label);
+  const spectrumDot = document.getElementById("spectrum-dot");
+  if (spectrumDot) {
+    spectrumDot.style.left = `calc(${pct}% - 9px)`;
+    spectrumDot.style.background = leanBadgeColor(pl.label);
+    spectrumDot.style.boxShadow = `0 2px 12px ${leanBadgeColor(pl.label)}80`;
+  }
 
+  // Confidence + explanation
   document.getElementById("political-conf").textContent =
-    pl.confidence ? `Confidence: ${titleCase(pl.confidence)}` : "";
+    pl.confidence ? `Confidence: ${pl.confidence}` : "";
   document.getElementById("political-explanation").textContent = pl.explanation || "";
 
+  // Framing choices
   const choices = pl.framing_choices || [];
   const framingSection = document.getElementById("framing-section");
   if (choices.length) {
@@ -274,12 +290,14 @@ function renderPoliticalLean(pl) {
         <div class="quote-card lean-${escapeHtml(lean)}">
           <blockquote class="quote-text">"${escapeHtml(c.quote)}"</blockquote>
           <p class="quote-analysis">${escapeHtml(c.analysis)}</p>
-        </div>`;
+        </div>
+      `;
     }).join("");
   } else {
     framingSection.classList.add("hidden");
   }
 
+  // Source selection
   const ss = pl.source_selection || {};
   const sourcesSection = document.getElementById("sources-section");
   if (ss.summary || (ss.sources && ss.sources.length)) {
@@ -292,6 +310,7 @@ function renderPoliticalLean(pl) {
     sourcesSection.classList.add("hidden");
   }
 
+  // Notable omissions
   const omissions = pl.notable_omissions || [];
   const omissionsSection = document.getElementById("omissions-section");
   if (omissions.length) {
@@ -311,9 +330,10 @@ function renderSentiment(s) {
   if (!s) return;
 
   const badge = document.getElementById("sentiment-badge");
-  badge.textContent = titleCase(s.label) || "";
+  badge.textContent = s.label || "";
   badge.style.color = sentBadgeColor(s.label);
 
+  // Gauge: numeric -100…+100 → reveal % of gradient (0% = all dark = very negative)
   const numeric = typeof s.numeric === "number" ? s.numeric : (s.score || 0) * 100;
   const leftPct = clamp(((numeric + 100) / 200) * 100, 0, 100);
   document.getElementById("gauge-fill").style.left = `${leftPct}%`;
@@ -339,7 +359,8 @@ function renderFactCheck(fc) {
         <span class="verdict-tag ${escapeHtml(verdict)}">${escapeHtml(c.verdict || "unverifiable")}</span>
         <p class="claim-text">${escapeHtml(c.claim)}</p>
         <p class="claim-explanation">${escapeHtml(c.explanation || "")}</p>
-      </div>`;
+      </div>
+    `;
   }).join("");
 
   openAccordion(document.getElementById("acc-fact"));
@@ -349,111 +370,88 @@ function renderFactCheck(fc) {
 function renderBroadenSection(items) {
   const section = document.getElementById("broaden-section");
   const grid    = document.getElementById("broaden-grid");
-
-  if (!items || !items.length) { section.classList.add("hidden"); return; }
-
-  section.classList.remove("hidden");
+  if (!items || !items.length) { if (section) section.style.display = 'none'; return; }
+  if (section) section.style.display = '';
   grid.innerHTML = items.map(item => {
+    const perspective = (item.perspective || 'independent').toLowerCase();
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.outlet + " " + item.angle)}`;
     return `
-      <div class="broaden-card">
-        <div class="broaden-card-top">
-          <span class="broaden-outlet">${escapeHtml(item.outlet)}</span>
-          <span class="perspective-tag ${escapeHtml((item.perspective || "").toLowerCase())}">
-            ${escapeHtml(item.perspective || "")}
-          </span>
-        </div>
-        <p class="broaden-angle">${escapeHtml(item.angle)}</p>
-        <p class="broaden-why">${escapeHtml(item.why)}</p>
-        <a class="broaden-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">Search on Google →</a>
-      </div>`;
-  }).join("");
+    <div class="broaden-card">
+      <div class="broaden-top">
+        <span class="broaden-outlet">${escapeHtml(item.outlet)}</span>
+        <span class="perspective-tag ${escapeHtml(perspective)}">${escapeHtml(item.perspective || '')}</span>
+      </div>
+      <p class="broaden-angle">${escapeHtml(item.angle)}</p>
+      <p class="broaden-why">${escapeHtml(item.why)}</p>
+      <a class="broaden-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer">Search on Google →</a>
+    </div>
+  `}).join('');
 }
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 function leanBadgeColor(label) {
   const l = (label || "").toLowerCase();
-  if (l.includes("left"))  return "#22d3ee";
+  if (l.includes("left"))  return "var(--cyan)";
   if (l.includes("right")) return "#ef4444";
-  return "rgba(240,244,248,0.50)";
+  return "var(--muted)";
 }
+
 function sentBadgeColor(label) {
   const l = (label || "").toLowerCase();
-  if (l.includes("positive")) return "#10b981";
+  if (l.includes("positive")) return "var(--green)";
   if (l.includes("negative")) return "#ef4444";
-  return "rgba(240,244,248,0.50)";
+  return "var(--muted)";
 }
+
 function factBadgeColor(score) {
-  if (score == null) return "rgba(240,244,248,0.50)";
-  if (score >= 80)   return "#10b981";
-  if (score >= 60)   return "#f59e0b";
+  if (score == null) return "var(--muted)";
+  if (score >= 75) return "var(--green)";
+  if (score >= 50) return "#f59e0b";
   return "#ef4444";
 }
 
-// ── Back button ───────────────────────────────────────────────────────────────
-document.getElementById("back-btn").addEventListener("click", () => {
-  resultsSection.classList.add("hidden");
-  document.querySelector(".hero").classList.remove("hidden");
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
+// ── Tab switching (Single / Compare) ──────────────────────────────────────────
+const compareResults = document.getElementById("compare-results");
+let _activeMode = 'single';
 
-const compareBackBtn = document.getElementById("compare-back-btn");
-if (compareBackBtn) {
-  compareBackBtn.addEventListener("click", () => {
-    document.getElementById("compare-results").classList.add("hidden");
-    document.querySelector(".hero").classList.remove("hidden");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+function setTab(mode) {
+  _activeMode = mode;
+  const isSingle = mode === 'single';
+  const tabSingleEl  = document.getElementById('tab-single');
+  const tabCompareEl = document.getElementById('tab-compare');
+  const singleEl  = document.getElementById('single-inputs');
+  const compareEl = document.getElementById('compare-inputs');
+  if (tabSingleEl)  tabSingleEl.classList.toggle('active', isSingle);
+  if (tabCompareEl) tabCompareEl.classList.toggle('active', !isSingle);
+  if (singleEl)  singleEl.classList.toggle('hidden', !isSingle);
+  if (compareEl) compareEl.classList.toggle('hidden', isSingle);
+  const label = analyzeBtn.querySelector('.btn-label');
+  if (label) label.textContent = isSingle ? 'Analyze Article' : 'Compare Articles';
+  if (compareResults) compareResults.classList.add('hidden');
+  resultsSection.classList.add('hidden');
+  clearError();
 }
 
-// ── Save to History button ────────────────────────────────────────────────────
-document.getElementById("save-btn").addEventListener("click", () => {
-  if (lastAnalyzedPayload) {
-    saveToHistory(lastAnalyzedPayload.data, lastAnalyzedUrl, "single");
-    const btn = document.getElementById("save-btn");
-    btn.textContent = "Saved ✓";
-    btn.classList.add("saved");
-  }
-});
-
-// ── Mode toggle ───────────────────────────────────────────────────────────────
-const singleInputCard  = document.getElementById("single-input-card");
-const compareInputCard = document.getElementById("compare-input-card");
-const compareResults   = document.getElementById("compare-results");
-
-document.getElementById("mode-single").addEventListener("click", function () {
-  this.classList.add("active");
-  document.getElementById("mode-compare").classList.remove("active");
-  singleInputCard.classList.remove("hidden");
-  compareInputCard.classList.add("hidden");
-  compareResults.classList.add("hidden");
-  clearError();
-});
-
-document.getElementById("mode-compare").addEventListener("click", function () {
-  this.classList.add("active");
-  document.getElementById("mode-single").classList.remove("active");
-  compareInputCard.classList.remove("hidden");
-  singleInputCard.classList.add("hidden");
-  resultsSection.classList.add("hidden");
-  clearError();
+document.addEventListener('DOMContentLoaded', () => {
+  const tabSingleEl  = document.getElementById('tab-single');
+  const tabCompareEl = document.getElementById('tab-compare');
+  if (tabSingleEl)  tabSingleEl.addEventListener('click',  () => setTab('single'));
+  if (tabCompareEl) tabCompareEl.addEventListener('click', () => setTab('compare'));
 });
 
 // ── Compare ───────────────────────────────────────────────────────────────────
-const compareBtn = document.getElementById("compare-btn");
-
 function setCompareLoading(on) {
-  compareBtn.classList.toggle("loading", on);
-  compareBtn.disabled = on;
-  compareBtn.querySelector(".btn-label").textContent = on ? "Comparing…" : "Compare Articles";
+  setLoading(on);
 }
 
 async function compareArticles() {
   clearError();
-  const url1  = document.getElementById("url-input-1").value.trim();
-  const text1 = document.getElementById("text-input-1").value.trim();
-  const url2  = document.getElementById("url-input-2").value.trim();
-  const text2 = document.getElementById("text-input-2").value.trim();
+  const url1   = document.getElementById("url-input-1").value.trim();
+  const text1  = document.getElementById("text-input-1").value.trim();
+  const url2   = document.getElementById("url-input-2").value.trim();
+  const text2  = document.getElementById("text-input-2").value.trim();
+  const label1 = document.getElementById("source-name-1").value.trim() || "Article A";
+  const label2 = document.getElementById("source-name-2").value.trim() || "Article B";
 
   if (!url1 && !text1) { showError("Article A: please enter a URL or paste article text."); return; }
   if (!url2 && !text2) { showError("Article B: please enter a URL or paste article text."); return; }
@@ -462,14 +460,25 @@ async function compareArticles() {
   compareResults.classList.add("hidden");
 
   try {
+    const token = typeof getToken === 'function' ? getToken() : null;
+    const compareHeaders = { 'Content-Type': 'application/json' };
+    if (token) compareHeaders['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${API_BASE}/compare`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: compareHeaders,
       body: JSON.stringify({
         article1: { url: url1 || null, text: text1 || null },
         article2: { url: url2 || null, text: text2 || null },
       }),
     });
+
+    if (res.status === 402) { showUpgradeModal(); return; }
+    if (res.status === 429) {
+      const b = await res.json();
+      showError(b.error === 'anon_limit' ? 'Sign up free for 3 analyses/month.' : 'Too many requests. Try again later.');
+      return;
+    }
 
     const payload = await res.json();
 
@@ -480,10 +489,10 @@ async function compareArticles() {
     if (!payload.article1.success) { showError("Article 1: " + payload.article1.error); return; }
     if (!payload.article2.success) { showError("Article 2: " + payload.article2.error); return; }
 
-    renderCompareResults(payload.article1.data, payload.article2.data, "Article A", "Article B");
+    renderCompareResults(payload.article1.data, payload.article2.data, label1, label2);
   } catch (err) {
     if (err.name === "TypeError" && err.message.includes("fetch")) {
-      showError("Cannot reach the backend. Make sure the FastAPI server is running.");
+      showError(`Cannot reach the backend at ${API_BASE}. Check your network or try again.`);
     } else {
       showError("Unexpected error: " + err.message);
     }
@@ -492,24 +501,23 @@ async function compareArticles() {
   }
 }
 
-compareBtn.addEventListener("click", compareArticles);
-
 // ── Compare render ────────────────────────────────────────────────────────────
 function renderCompareResults(d1, d2, label1 = "Article A", label2 = "Article B") {
   const cols = document.getElementById("compare-columns");
   cols.innerHTML = buildCompareCol(d1, "1", label1) + buildCompareCol(d2, "2", label2);
 
+  // Wire accordion toggles for the newly injected HTML
   cols.querySelectorAll(".accordion").forEach(acc => {
-    const header = acc.querySelector(".accordion-header");
-    header.addEventListener("click", () => toggleAccordion(acc));
-    header.addEventListener("keydown", e => {
+    const head = acc.querySelector(".acc-head");
+    if (!head) return;
+    head.addEventListener("click", () => toggleAccordion(acc));
+    head.addEventListener("keydown", e => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleAccordion(acc); }
     });
   });
 
-  document.querySelector(".hero").classList.add("hidden");
   compareResults.classList.remove("hidden");
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  compareResults.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function buildCompareCol(data, n, label) {
@@ -521,7 +529,6 @@ function buildCompareCol(data, n, label) {
   const pct      = clamp(((numeric / 10 + 1) / 2) * 100, 2, 98);
   const sentNum  = typeof s.numeric === "number" ? s.numeric : 0;
   const gaugePct = clamp(((sentNum + 100) / 200) * 100, 0, 100);
-  const dotBg    = leanBadgeColor(pl.label);
 
   const claims = (fc.claims || []).map(c => {
     const v = (c.verdict || "unverifiable").toLowerCase();
@@ -543,25 +550,27 @@ function buildCompareCol(data, n, label) {
         ${escapeHtml(label)}
       </div>
 
-      <div class="summary-prose-card">
+      <!-- summary -->
+      <div class="summary-prose">
         <div class="summary-prose-label">Summary</div>
-        ${typeTag}
         <p class="summary-prose-text">${escapeHtml(data.summary || "")}</p>
+        ${typeTag ? `<span class="article-type-tag">${escapeHtml(data.article_type || "")}</span>` : ""}
       </div>
 
-      <div class="accordion glass-card-sm" data-open="true">
-        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="accordion-title-row">
-            <span class="accordion-title">Political Lean</span>
-            <span class="acc-badge" style="color:${leanBadgeColor(pl.label)}">${escapeHtml(pl.label || "")}</span>
+      <!-- political lean -->
+      <div class="accordion" data-open="true">
+        <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+          <div class="acc-title-row">
+            <span class="acc-title">Political Lean</span>
+            <span class="acc-badge-pill" style="color:${leanBadgeColor(pl.label)}">${escapeHtml(pl.label || "")}</span>
           </div>
-          <span class="chevron">▾</span>
+          <span class="acc-chevron open">▾</span>
         </div>
-        <div class="accordion-body">
+        <div class="acc-body">
           <div class="spectrum-wrap">
-            <div class="spectrum-bar">
+            <div style="position:relative;margin-bottom:8px">
               <div class="spectrum-track"></div>
-              <div class="spectrum-dot" style="left:calc(${pct}% - 9px);background:${dotBg}"></div>
+              <div class="spectrum-dot" style="left:calc(${pct}% - 9px);background:${leanBadgeColor(pl.label)};box-shadow:0 2px 12px ${leanBadgeColor(pl.label)}80"></div>
             </div>
             <div class="spectrum-labels"><span>Left</span><span>Center</span><span>Right</span></div>
           </div>
@@ -570,18 +579,19 @@ function buildCompareCol(data, n, label) {
         </div>
       </div>
 
-      <div class="accordion glass-card-sm" data-open="true">
-        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="accordion-title-row">
-            <span class="accordion-title">Sentiment</span>
-            <span class="acc-badge" style="color:${sentBadgeColor(s.label)}">${escapeHtml(s.label || "")}</span>
+      <!-- sentiment -->
+      <div class="accordion" data-open="true">
+        <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+          <div class="acc-title-row">
+            <span class="acc-title">Sentiment</span>
+            <span class="acc-badge-pill" style="color:${sentBadgeColor(s.label)}">${escapeHtml(s.label || "")}</span>
           </div>
-          <span class="chevron">▾</span>
+          <span class="acc-chevron open">▾</span>
         </div>
-        <div class="accordion-body">
-          <div class="gauge-wrap">
+        <div class="acc-body">
+          <div>
             <div class="gauge-track">
-              <div class="gauge-fill" style="left:${gaugePct}%"></div>
+              <div class="gauge-cover" style="left:${gaugePct}%"></div>
             </div>
             <div class="gauge-labels"><span>Very Negative</span><span>Neutral</span><span>Very Positive</span></div>
           </div>
@@ -589,232 +599,299 @@ function buildCompareCol(data, n, label) {
         </div>
       </div>
 
-      <div class="accordion glass-card-sm" data-open="true">
-        <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-          <div class="accordion-title-row">
-            <span class="accordion-title">Fact Check</span>
-            <span class="acc-badge" style="color:${factBadgeColor(fc.score)}">${fc.score != null ? fc.score + "/100" : ""}</span>
+      <!-- fact check -->
+      <div class="accordion" data-open="true">
+        <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+          <div class="acc-title-row">
+            <span class="acc-title">Fact Check</span>
+            <span class="acc-badge-pill" style="color:${factBadgeColor(fc.score)}">${fc.score != null ? fc.score + "/100" : ""}</span>
           </div>
-          <span class="chevron">▾</span>
+          <span class="acc-chevron open">▾</span>
         </div>
-        <div class="accordion-body">
+        <div class="acc-body">
           <p class="body-text">${escapeHtml(fc.summary || "")}</p>
           <div class="claim-list">${claims}</div>
         </div>
       </div>
-    </div>`;
+    </div>
+  `;
 }
 
-// ── History (localStorage) ────────────────────────────────────────────────────
-const HISTORY_KEY = "veris_history";
-
-function getHistory() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
-}
-
-function saveToHistory(data, url, type = "single") {
-  if (!data) return;
-  const pl = data.political_lean || {};
-  const fc = data.fact_check     || {};
-  const s  = data.sentiment      || {};
-
-  let source = "Unknown";
-  if (url) {
-    try { source = new URL(url).hostname.replace(/^www\./, ""); } catch (_) {}
-  }
-
-  const item = {
-    id:          Date.now().toString(),
-    date:        new Date().toISOString(),
-    type,
-    url,
-    source,
-    lean:        pl.label || "Unknown",
-    lean_numeric: typeof pl.numeric === "number" ? pl.numeric : 0,
-    sentiment:   s.label || "Unknown",
-    fact_score:  fc.score != null ? fc.score : null,
-    article_type: data.article_type || "",
-    summary:     (data.summary || "").substring(0, 200),
-  };
-
-  const history = getHistory();
-  history.unshift(item);
-  if (history.length > 100) history.pop();
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-}
-
-// ── History page render ───────────────────────────────────────────────────────
-function renderHistoryPage() {
-  const history = getHistory();
-  const listEl  = document.getElementById("history-list");
-  if (!listEl) return;
-
-  if (!history.length) {
-    listEl.innerHTML = `
-      <div class="history-empty">
-        <div class="history-empty-icon">📰</div>
-        <p>No analyses yet. Analyze an article to see it here.</p>
-      </div>`;
-    return;
-  }
-
-  const grouped = groupByDate(history);
-  listEl.innerHTML = grouped.map(({ label, items }) => `
-    <div class="history-group-label">${label}</div>
-    ${items.map(item => buildHistoryItem(item)).join("")}
-  `).join("");
-}
-
-function groupByDate(items) {
-  const today     = new Date(); today.setHours(0,0,0,0);
-  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-
-  const groups = { Today: [], Yesterday: [], Earlier: [] };
-  items.forEach(item => {
-    const d = new Date(item.date); d.setHours(0,0,0,0);
-    if (d.getTime() === today.getTime())     groups.Today.push(item);
-    else if (d.getTime() === yesterday.getTime()) groups.Yesterday.push(item);
-    else groups.Earlier.push(item);
-  });
-
-  return Object.entries(groups)
-    .filter(([, v]) => v.length)
-    .map(([label, items]) => ({ label, items }));
-}
-
-function buildHistoryItem(item) {
-  const leanClass = (item.lean || "").toLowerCase().includes("left")  ? "left"
-                  : (item.lean || "").toLowerCase().includes("right") ? "right"
-                  : "center";
-  const dateStr = new Date(item.date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const icon    = item.type === "compare" ? "⇄" : "≡";
-  const factTag = item.fact_score != null
-    ? `<span class="fact-pill">${item.fact_score}/100</span>` : "";
-
-  return `
-    <div class="history-item">
-      <div class="history-item-icon ${item.type}">${icon}</div>
-      <div class="history-item-body">
-        <div class="history-item-title">${escapeHtml(item.source || "Article")}</div>
-        <div class="history-item-meta">${escapeHtml(item.source)} · ${dateStr}</div>
-      </div>
-      <div class="history-item-badges">
-        <span class="lean-badge ${leanClass}">${escapeHtml(item.lean)}</span>
-        ${factTag}
-      </div>
-    </div>`;
-}
-
-// History search filter
-document.getElementById("history-search").addEventListener("input", function () {
-  const q = this.value.toLowerCase();
-  document.querySelectorAll(".history-item").forEach(el => {
-    const text = el.textContent.toLowerCase();
-    el.style.display = text.includes(q) ? "" : "none";
-  });
-});
-
-// ── Account page render ───────────────────────────────────────────────────────
-function renderAccountPage() {
-  const history  = getHistory();
-  const total    = history.length;
-  const thisMonth = history.filter(h => {
-    const d = new Date(h.date);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  }).length;
-
-  // Stat grid
-  const statGrid = document.getElementById("stat-grid");
-  if (statGrid) {
-    statGrid.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-label">Analyses</div>
-        <div class="stat-value" style="color:#22d3ee">${thisMonth}</div>
-        <div class="stat-sub">this month</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Saved Total</div>
-        <div class="stat-value" style="color:#10b981">${total}</div>
-        <div class="stat-sub">all time</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Top Lean</div>
-        <div class="stat-value" style="font-size:20px;color:#a855f7">${topLean(history)}</div>
-        <div class="stat-sub">most common</div>
-      </div>`;
-  }
-
-  // Top sources
-  const topSourcesEl = document.getElementById("top-sources");
-  if (topSourcesEl) {
-    const counts = {};
-    const leans  = {};
-    history.forEach(h => {
-      counts[h.source] = (counts[h.source] || 0) + 1;
-      leans[h.source]  = h.lean;
+// ── Auth helpers ──────────────────────────────────────────────────────────────
+async function startCheckout() {
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (!token) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+  try {
+    const r = await fetch(`${API_BASE}/stripe/checkout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
     });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    if (!sorted.length) {
-      topSourcesEl.innerHTML = `<div class="source-row"><span class="source-row-name" style="color:var(--muted)">No data yet</span></div>`;
-    } else {
-      topSourcesEl.innerHTML = sorted.map(([src, count]) => {
-        const lean = leans[src] || "";
-        const leanClass = lean.toLowerCase().includes("left")  ? "left"
-                        : lean.toLowerCase().includes("right") ? "right" : "center";
-        return `
-          <div class="source-row">
-            <span class="source-row-name">${escapeHtml(src)}</span>
-            <div class="source-row-meta">
-              <span class="source-row-count">${count} ${count === 1 ? "analysis" : "analyses"}</span>
-              <span class="lean-badge ${leanClass}">${escapeHtml(lean)}</span>
-            </div>
-          </div>`;
-      }).join("");
+    if (!r.ok) {
+      const err = await r.text();
+      console.error('Checkout error:', r.status, err);
+      if (typeof showToast === 'function') showToast(`Checkout failed (${r.status}). Stripe may not be configured.`, 'error');
+      return;
     }
+    const { url } = await r.json();
+    if (!url) {
+      if (typeof showToast === 'function') showToast('Checkout returned no URL.', 'error');
+      return;
+    }
+    window.location.href = url;
+  } catch (e) {
+    console.error('Checkout exception:', e);
+    if (typeof showToast === 'function') showToast('Could not start checkout. Please try again.', 'error');
   }
-
-  // Plan usage bars from real data
-  const usageEl = document.getElementById("usage-analyses");
-  if (usageEl) usageEl.textContent = `${thisMonth} / 100`;
-  const fillEl = document.getElementById("fill-analyses");
-  if (fillEl) fillEl.style.width = `${Math.min(thisMonth, 100)}%`;
-  const savedEl = document.getElementById("usage-saved");
-  if (savedEl) savedEl.textContent = `${total} / 200`;
-  const fillSaved = document.getElementById("fill-saved");
-  if (fillSaved) fillSaved.style.width = `${Math.min((total / 200) * 100, 100)}%`;
 }
 
-function topLean(history) {
-  const counts = {};
-  history.forEach(h => { if (h.lean) counts[h.lean] = (counts[h.lean] || 0) + 1; });
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  return sorted.length ? sorted[0][0] : "—";
+function showUpgradeModal() {
+  document.getElementById('upgrade-modal').hidden = false;
+  document.getElementById('upgrade-btn').onclick = startCheckout;
 }
 
-// Account tab switching
-document.querySelectorAll(".account-nav-item").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".account-nav-item").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    document.querySelectorAll(".account-tab").forEach(t => t.classList.add("hidden"));
-    const tab = document.getElementById("tab-" + btn.dataset.tab);
-    if (tab) tab.classList.remove("hidden");
-  });
-});
+function showAnonLimitMessage() {
+  errorText.innerHTML = `You've used your free try. <button onclick="if(typeof signInWithGoogle==='function')signInWithGoogle()" style="color:var(--cyan);background:none;border:none;cursor:pointer;font-size:inherit;text-decoration:underline">Sign up free</button> for 3 analyses/month.`;
+  errorBanner.classList.remove('hidden');
+  resultsSection.classList.add('hidden');
+}
 
-// Toggle switches
-document.querySelectorAll(".toggle").forEach(toggle => {
-  toggle.addEventListener("click", () => {
-    const on = toggle.dataset.on === "true";
-    toggle.dataset.on = String(!on);
+function showAccountSettings() {
+  if (typeof showPage === 'function') showPage('account');
+  loadAccountUsage();
+}
+
+// ── Account page ──────────────────────────────────────────────────────────────
+function initAccountPage() {
+  document.querySelectorAll('.side-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const sec = item.dataset.accsec;
+      document.querySelectorAll('.side-nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      document.querySelectorAll('.account-section').forEach(s => s.classList.add('hidden'));
+      const target = document.getElementById(`accsec-${sec}`);
+      if (target) target.classList.remove('hidden');
+    });
   });
-});
+
+  const signoutBtn = document.getElementById('account-signout-btn');
+  if (signoutBtn) signoutBtn.addEventListener('click', () => {
+    if (typeof authSignOut === 'function') authSignOut();
+  });
+
+  const deleteBtn = document.getElementById('delete-account-btn');
+  if (deleteBtn) deleteBtn.addEventListener('click', confirmDeleteAccount);
+
+  const upgradeBtn = document.getElementById('account-upgrade-btn');
+  if (upgradeBtn) upgradeBtn.addEventListener('click', startCheckout);
+}
+
+async function loadAccountUsage() {
+  const session = typeof getSession === 'function' ? getSession() : null;
+  if (!session) return;
+
+  const email   = session.user.email;
+  const initial = email[0].toUpperCase();
+  const nameParts = email.split('@')[0].replace(/[._]/g, ' ');
+
+  const avatarEl = document.getElementById('profile-avatar');
+  const nameEl   = document.getElementById('profile-name');
+  const emailEl  = document.getElementById('profile-email');
+  if (avatarEl) avatarEl.textContent = initial;
+  if (nameEl)   nameEl.textContent   = nameParts;
+  if (emailEl)  emailEl.textContent  = email;
+
+  try {
+    const token = typeof getToken === 'function' ? getToken() : null;
+    if (!token) return;
+    const res = await fetch(`${API_BASE}/auth/usage`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const { analyses_this_month, limit, tier } = await res.json();
+
+    const statAnalyses = document.getElementById('stat-analyses');
+    if (statAnalyses) statAnalyses.textContent = analyses_this_month ?? '—';
+    loadAccountSourcesAndCounts();
+
+    const pct = limit > 0 ? Math.min(100, ((analyses_this_month || 0) / limit) * 100) : 0;
+    const fill = document.getElementById('usage-bar-fill');
+    const count = document.getElementById('usage-bar-count');
+    if (fill)  fill.style.width   = `${pct.toFixed(1)}%`;
+    if (count) count.textContent  = `${analyses_this_month ?? 0} / ${limit ?? '—'}`;
+
+    const isPaid = tier === 'paid';
+    const planBadge = document.getElementById('plan-badge');
+    const planTitle = document.getElementById('plan-info-title');
+    const planDesc  = document.getElementById('plan-info-desc');
+    const upgradeBtn = document.getElementById('account-upgrade-btn');
+    if (planBadge) planBadge.textContent = isPaid ? '✦ Pro Plan' : 'Free Plan';
+    if (planTitle) planTitle.textContent = isPaid ? '✦ Pro Plan — $7.99/month' : 'Free Plan';
+    if (planDesc)  planDesc.textContent  = isPaid
+      ? '30 analyses per month. Thank you for supporting Veris!'
+      : '3 analyses per month. Upgrade for 30 analyses/month.';
+    if (upgradeBtn) upgradeBtn.style.display = isPaid ? 'none' : '';
+  } catch (e) {
+    console.error('Failed to load usage:', e);
+  }
+}
+
+async function loadAccountSourcesAndCounts() {
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/history?offset=0&limit=50`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const { items } = await res.json();
+    const list = items || [];
+
+    const savedEl = document.getElementById('stat-saved');
+    if (savedEl) savedEl.textContent = list.length;
+
+    // Comparisons aren't tracked separately yet
+    const cmpEl = document.getElementById('stat-comparisons');
+    if (cmpEl) cmpEl.textContent = '—';
+
+    // Aggregate by source_name
+    const counts = {};
+    const leans = {};
+    list.forEach(item => {
+      const src = (item.source_name || '').trim();
+      if (!src) return;
+      counts[src] = (counts[src] || 0) + 1;
+      if (item.lean_label) {
+        if (!leans[src]) leans[src] = {};
+        leans[src][item.lean_label] = (leans[src][item.lean_label] || 0) + 1;
+      }
+    });
+    const top = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+    const wrap = document.getElementById('top-sources-list');
+    if (!wrap) return;
+    if (!top.length) {
+      wrap.innerHTML = '<div class="empty-text" style="padding:20px 0">Analyze a few articles to see your top sources.</div>';
+      return;
+    }
+    wrap.innerHTML = top.map(([src, count]) => {
+      const dom = leans[src]
+        ? Object.entries(leans[src]).sort((a,b) => b[1] - a[1])[0][0]
+        : null;
+      const cls = leanBadgeClassFor(dom);
+      const badge = dom ? `<span class="${cls}">${escapeHtml(dom)}</span>` : '';
+      return `
+        <div class="source-row">
+          <div>
+            <div class="source-row-name">${escapeHtml(src)}</div>
+            <div class="source-row-count">${count} analys${count === 1 ? 'is' : 'es'}</div>
+          </div>
+          <div>${badge}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    console.error('Failed to load top sources:', e);
+  }
+}
+
+function leanBadgeClassFor(lean) {
+  if (!lean) return 'h-badge h-badge-center';
+  const l = lean.toLowerCase();
+  if (l.includes('left'))  return 'h-badge h-badge-left';
+  if (l.includes('right')) return 'h-badge h-badge-right';
+  return 'h-badge h-badge-center';
+}
+
+async function confirmDeleteAccount() {
+  if (!confirm('This will permanently delete your account and all saved analyses. This cannot be undone.')) return;
+  const token = typeof getToken === 'function' ? getToken() : null;
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE}/auth/account`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (typeof authSignOut === 'function') await authSignOut();
+    if (typeof showToast === 'function') showToast('Your account has been deleted.', 'info');
+  } catch {
+    showError('Could not delete account. Please try again.');
+  }
+}
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 urlInput.addEventListener("keydown",  e => { if (e.key === "Enter") analyzeArticle(); });
 textInput.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) analyzeArticle(); });
-analyzeBtn.addEventListener("click", analyzeArticle);
+analyzeBtn.addEventListener("click", () => {
+  if (_activeMode === 'compare') {
+    compareArticles();
+  } else {
+    analyzeArticle();
+  }
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 initAccordions();
+
+document.addEventListener('DOMContentLoaded', () => {
+  // ── Nav link routing ──
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = btn.dataset.page;
+      if (page === 'history') {
+        const session = typeof getSession === 'function' ? getSession() : null;
+        if (!session) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+        showPage('history');
+        if (typeof loadHistory === 'function') {
+          const list = document.getElementById('history-list');
+          if (list) list.innerHTML = '';
+          if (typeof _historyOffset !== 'undefined') _historyOffset = 0;
+          loadHistory();
+        }
+        return;
+      }
+      if (page === 'account') {
+        const session = typeof getSession === 'function' ? getSession() : null;
+        if (!session) { if (typeof signInWithGoogle === 'function') signInWithGoogle(); return; }
+        showPage('account');
+        loadAccountUsage();
+        return;
+      }
+      if (page === 'home') {
+        resultsSection.classList.add('hidden');
+        const cmp = document.getElementById('compare-results');
+        if (cmp) cmp.classList.add('hidden');
+        const hero = document.querySelector('.hero');
+        if (hero) hero.style.display = '';
+        clearError();
+      }
+      showPage(page);
+    });
+  });
+
+  initAccountPage();
+
+  const logoLink = document.getElementById('nav-logo-link');
+  if (logoLink) logoLink.addEventListener('click', e => {
+    e.preventDefault();
+    resultsSection.classList.add('hidden');
+    const cmp = document.getElementById('compare-results');
+    if (cmp) cmp.classList.add('hidden');
+    const hero = document.querySelector('.hero');
+    if (hero) hero.style.display = '';
+    clearError();
+    showPage('home');
+  });
+
+  const backBtn = document.getElementById('results-back-btn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      resultsSection.classList.add('hidden');
+      const cmp = document.getElementById('compare-results');
+      if (cmp) cmp.classList.add('hidden');
+      const hero = document.querySelector('.hero');
+      if (hero) hero.style.display = '';
+      clearError();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+});

@@ -167,6 +167,7 @@ this exact structure:
       }}
     ]
   }},
+  "title": "<5-8 word descriptive title of the analysis, naming the topic and key framing — e.g. 'Reuters Climate Coverage Leans Center-Left' or 'Fox News Frames Immigration Critically'>",
   "summary": "<2-3 sentence objective summary of the article>",
   "article_type": "<news report|opinion|analysis|editorial|feature>",
   "broaden_your_view": [

@@ -5,368 +5,399 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Veris — The truth, with receipts</title>
   <link rel="icon" type="image/svg+xml" href="assets/veris-favicon-v2.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
 
     <!-- ── Background ───────────────────────────────────────────────── -->
-    <div class="bg-layer" aria-hidden="true">
-      <div class="orb orb-cyan"></div>
-      <div class="orb orb-purple"></div>
-      <div class="orb orb-green"></div>
-      <div class="grid-overlay"></div>
+    <div class="ambient" aria-hidden="true">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+      <div class="grid"></div>
     </div>
-
-    <!-- ── Sticky Nav ────────────────────────────────────────────────── -->
-    <nav class="site-nav">
-      <a class="nav-logo" href="#">
-        <img src="assets/veris-logo-dark.svg" alt="veris.news" class="logo-img" />
-      </a>
-      <div class="nav-links"></div>
-      <div class="nav-right"></div>
-    </nav>
 
     <div class="container">
 
-      <!-- ── Page: Analyze ─────────────────────────────────────────── -->
-      <div id="page-analyze" class="page">
+      <nav>
+        <a class="nav-logo" href="#" id="nav-logo-link">
+          <img src="assets/veris-logo-dark.svg" alt="veris.news" style="height:38px;width:auto;" />
+        </a>
+        <div class="nav-links">
+          <button class="nav-link active" data-page="home">Analyze</button>
+          <button class="nav-link" data-page="history">My History</button>
+          <button class="nav-link" data-page="account">Account</button>
+        </div>
+        <div class="nav-right" id="nav-right">
+          <!-- Populated by auth.js -->
+        </div>
+      </nav>
 
-        <!-- ── Hero ─────────────────────────────────────────────────── -->
-        <section class="hero">
+      <section class="page-section" id="page-home">
 
-          <!-- Left: copy -->
-          <div class="hero-copy">
-            <div class="hero-tag">
-              <span class="tag-dot"></span>
-              You're only getting half the story.
+      <!-- ── Hero ───────────────────────────────────────────────────── -->
+      <section class="hero">
+
+        <!-- Left: copy -->
+        <div class="hero-left">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            The truth, with receipts.
+          </div>
+          <h1 class="hero-h">
+            Read the news.<br/>Understand the<br/><span class="hero-gradient">bias.</span>
+          </h1>
+          <p class="hero-sub">
+            Every article you read is shaped by choices about what to include, who to quote, and what to leave out. Veris shows you those decisions and reveals what you're missing.
+          </p>
+
+          <div class="how-steps">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <div class="step-title">Paste any article or URL</div>
+                <div class="step-desc">See the political lean — and the exact phrases that signal it</div>
+              </div>
             </div>
-            <h1 class="hero-headline">Read the news.<br/>Understand the <span class="headline-gradient">bias.</span></h1>
-            <p class="hero-sub">Every article you read is shaped by choices about what to include, who to quote, and what to leave out. Veris shows you those decisions and reveals what you're missing.</p>
-
-            <div class="hero-steps">
-              <div class="hero-step">
-                <div class="step-num">1</div>
-                <div class="step-body">
-                  <div class="step-title">Paste any article or URL</div>
-                  <div class="step-desc">See the political lean — and the exact phrases that signal it</div>
-                </div>
-              </div>
-              <div class="hero-step">
-                <div class="step-num">2</div>
-                <div class="step-body">
-                  <div class="step-title">Get the receipts</div>
-                  <div class="step-desc">Every factual claim verified. Every omission named. No black boxes, no agenda.</div>
-                </div>
-              </div>
-              <div class="hero-step">
-                <div class="step-num">3</div>
-                <div class="step-body">
-                  <div class="step-title">Escape the bubble</div>
-                  <div class="step-desc">Veris finds the same story from other perspectives — so you can decide for yourself</div>
-                </div>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <div class="step-title">Get the receipts</div>
+                <div class="step-desc">Every factual claim verified. Every omission named. No black boxes, no agenda.</div>
               </div>
             </div>
-
-            <div class="trust-pills">
-              <div class="trust-pill">See why, not just what</div>
-              <div class="trust-pill">Every claim, checked</div>
-              <div class="trust-pill">Read the full spectrum</div>
-              <div class="trust-pill">Escape the bubble</div>
-              <div class="trust-pill">Broaden your view</div>
+            <div class="step">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <div class="step-title">Escape the bubble</div>
+                <div class="step-desc">Veris finds the same story from other perspectives — so you can decide for yourself</div>
+              </div>
             </div>
           </div>
 
-          <!-- Right: input card -->
-          <div class="input-col-wrap">
-            <div class="glass-card input-card">
-              <p class="section-label">Analyze an article</p>
-
-              <!-- Mode tabs -->
-              <div class="mode-tabs">
-                <button class="mode-tab active" id="mode-single">Single Article</button>
-                <button class="mode-tab" id="mode-compare">Compare Two</button>
-              </div>
-
-              <!-- Single article inputs -->
-              <div id="single-input-card">
-                <input
-                  id="url-input"
-                  type="url"
-                  class="text-input"
-                  placeholder="https://example.com/article-url"
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-                <div class="or-row"><span>or paste text</span></div>
-                <textarea
-                  id="text-input"
-                  class="text-area"
-                  rows="6"
-                  placeholder="Paste the full article text here…"
-                ></textarea>
-                <button id="analyze-btn" class="analyze-btn">
-                  <span class="btn-label">Analyze Article</span>
-                  <span class="btn-arrow">→</span>
-                  <span class="btn-spinner" aria-hidden="true"></span>
-                </button>
-              </div>
-
-              <!-- Compare two articles (hidden by default) -->
-              <div id="compare-input-card" class="hidden">
-                <div class="compare-inputs-grid">
-                  <div class="compare-input-col">
-                    <p class="compare-ab-label">Article A</p>
-                    <input id="url-input-1" type="url" class="text-input" placeholder="URL…" autocomplete="off" spellcheck="false" />
-                    <textarea id="text-input-1" class="text-area cmp-textarea" rows="5" placeholder="…or paste text"></textarea>
-                  </div>
-                  <div class="compare-input-col">
-                    <p class="compare-ab-label">Article B</p>
-                    <input id="url-input-2" type="url" class="text-input" placeholder="URL…" autocomplete="off" spellcheck="false" />
-                    <textarea id="text-input-2" class="text-area cmp-textarea" rows="5" placeholder="…or paste text"></textarea>
-                  </div>
-                </div>
-                <button id="compare-btn" class="analyze-btn">
-                  <span class="btn-label">Compare Articles</span>
-                  <span class="btn-arrow">→</span>
-                  <span class="btn-spinner" aria-hidden="true"></span>
-                </button>
-              </div>
-
-            </div>
+          <div class="trust-row">
+            <div class="trust-pill">See why, not just what</div>
+            <div class="trust-pill">Every claim, checked</div>
+            <div class="trust-pill">Read the full spectrum</div>
+            <div class="trust-pill">Escape the bubble</div>
+            <div class="trust-pill">Broaden your view</div>
           </div>
-
-        </section>
-
-        <!-- ── Error ────────────────────────────────────────────────── -->
-        <div id="error-banner" class="error-banner hidden" role="alert">
-          <span>⚠</span>
-          <span id="error-text"></span>
         </div>
 
-        <!-- ── Results ───────────────────────────────────────────────── -->
-        <section id="results" class="results hidden">
-
-          <!-- Results header -->
-          <div class="results-header">
-            <button class="back-btn" id="back-btn">← New Analysis</button>
-            <div class="results-header-center">
-              <h2 class="results-title" id="results-title">Article Analysis</h2>
-              <div class="results-meta" id="results-meta"></div>
+        <div class="input-col">
+          <div class="input-card" id="input-card-root">
+            <div class="card-label">Analyze an article</div>
+            <div class="tab-row">
+              <button class="tab active" id="tab-single">Single Article</button>
+              <button class="tab" id="tab-compare">Compare Two</button>
             </div>
-            <button class="save-btn" id="save-btn">Save to History ✓</button>
+
+            <!-- Single mode -->
+            <div id="single-inputs">
+              <input
+                id="url-input"
+                type="url"
+                class="url-input"
+                placeholder="https://example.com/article-url"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <div class="or-divider">or paste text</div>
+              <textarea
+                id="text-input"
+                class="text-area"
+                rows="6"
+                placeholder="Paste the full article text here…"
+              ></textarea>
+            </div>
+
+            <!-- Compare mode (hidden by default) -->
+            <div id="compare-inputs" class="compare-grid hidden">
+              <div class="compare-col">
+                <div class="compare-col-label">Article A</div>
+                <input id="source-name-1" type="text" class="url-input" placeholder="Source name" autocomplete="off" spellcheck="false" style="margin-bottom:10px" />
+                <input id="url-input-1" type="url" class="url-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
+                <textarea id="text-input-1" class="text-area cmp-textarea" rows="4" placeholder="…or paste text"></textarea>
+              </div>
+              <div class="compare-col">
+                <div class="compare-col-label">Article B</div>
+                <input id="source-name-2" type="text" class="url-input" placeholder="Source name" autocomplete="off" spellcheck="false" style="margin-bottom:10px" />
+                <input id="url-input-2" type="url" class="url-input cmp-url" placeholder="URL…" autocomplete="off" spellcheck="false" />
+                <textarea id="text-input-2" class="text-area cmp-textarea" rows="4" placeholder="…or paste text"></textarea>
+              </div>
+            </div>
+
+            <button id="analyze-btn" class="analyze-btn">
+              <span class="btn-label">Analyze Article</span>
+              <span class="btn-arrow">→</span>
+              <span class="btn-spinner" aria-hidden="true"></span>
+            </button>
           </div>
-
-          <!-- Score cards row -->
-          <div class="score-cards-row" id="score-cards-row"></div>
-
-          <!-- Summary prose block -->
-          <div class="summary-prose-card" id="summary-block"></div>
-
-          <!-- Political Lean accordion -->
-          <div class="accordion glass-card-sm" id="acc-political" data-open="true">
-            <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-              <div class="accordion-title-row">
-                <span class="accordion-title">Political Lean</span>
-                <span class="acc-badge" id="political-badge"></span>
-              </div>
-              <span class="chevron">▾</span>
-            </div>
-            <div class="accordion-body" id="body-political">
-              <div class="spectrum-wrap">
-                <div class="spectrum-bar">
-                  <div class="spectrum-track"></div>
-                  <div class="spectrum-dot" id="spectrum-dot"></div>
-                </div>
-                <div class="spectrum-labels">
-                  <span>Left</span><span>Center</span><span>Right</span>
-                </div>
-              </div>
-              <p class="conf-line" id="political-conf"></p>
-              <p class="body-text" id="political-explanation"></p>
-
-              <div class="subsection" id="framing-section">
-                <p class="subsection-label">Framing Choices</p>
-                <div class="quote-list" id="quote-list"></div>
-              </div>
-
-              <div class="subsection" id="sources-section">
-                <p class="subsection-label">Source Selection</p>
-                <p class="body-text" id="source-summary"></p>
-                <div class="source-tags" id="source-tags"></div>
-              </div>
-
-              <div class="subsection" id="omissions-section">
-                <p class="subsection-label">Notable Omissions</p>
-                <div class="omission-list" id="omission-list"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Sentiment accordion -->
-          <div class="accordion glass-card-sm" id="acc-sentiment" data-open="false">
-            <div class="accordion-header" role="button" tabindex="0" aria-expanded="false">
-              <div class="accordion-title-row">
-                <span class="accordion-title">Sentiment</span>
-                <span class="acc-badge" id="sentiment-badge"></span>
-              </div>
-              <span class="chevron">▾</span>
-            </div>
-            <div class="accordion-body hidden" id="body-sentiment">
-              <div class="gauge-wrap">
-                <div class="gauge-track">
-                  <div class="gauge-fill" id="gauge-fill"></div>
-                </div>
-                <div class="gauge-labels">
-                  <span>Very Negative</span><span>Neutral</span><span>Very Positive</span>
-                </div>
-              </div>
-              <p class="body-text" id="sentiment-explanation"></p>
-            </div>
-          </div>
-
-          <!-- Fact Check accordion -->
-          <div class="accordion glass-card-sm" id="acc-fact" data-open="true">
-            <div class="accordion-header" role="button" tabindex="0" aria-expanded="true">
-              <div class="accordion-title-row">
-                <span class="accordion-title">Fact Check</span>
-                <span class="acc-badge" id="fact-badge"></span>
-              </div>
-              <span class="chevron">▾</span>
-            </div>
-            <div class="accordion-body" id="body-fact">
-              <p class="body-text" id="fact-summary"></p>
-              <div class="claim-list" id="claim-list"></div>
-            </div>
-          </div>
-
-          <!-- Broaden Your View -->
-          <div class="broaden-section" id="broaden-section">
-            <p class="broaden-heading">Broaden Your View</p>
-            <p class="broaden-sub">Explore how other outlets frame this story differently.</p>
-            <div class="broaden-grid" id="broaden-grid"></div>
-          </div>
-
-          <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
-
-        </section>
-
-        <!-- ── Compare Results ───────────────────────────────────────── -->
-        <section id="compare-results" class="compare-results hidden">
-          <div class="results-header">
-            <button class="back-btn" id="compare-back-btn">← New Analysis</button>
-            <div class="results-header-center">
-              <h2 class="results-title">Comparison Results</h2>
-            </div>
-            <div></div>
-          </div>
-          <div class="compare-columns" id="compare-columns"></div>
-          <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
-        </section>
-
-      </div><!-- /page-analyze -->
-
-      <!-- ── Page: History ─────────────────────────────────────────── -->
-      <div id="page-history" class="page hidden">
-        <div class="page-header">
-          <h1 class="page-title">My History</h1>
-          <p class="page-sub">All your analyzed articles, saved automatically.</p>
         </div>
-        <div class="history-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="history-search" placeholder="Search articles…" />
-        </div>
-        <div id="history-list"></div>
+
+      </section>
+
+      </section>
+
+      <!-- ── Error ───────────────────────────────────────────────────── -->
+      <div id="error-banner" class="error-banner hidden" role="alert">
+        <span>⚠</span>
+        <span id="error-text"></span>
       </div>
 
-      <!-- ── Page: Account ─────────────────────────────────────────── -->
-      <div id="page-account" class="page hidden">
-        <div class="account-layout">
+      <!-- ── Results ────────────────────────────────────────────────── -->
+      <section id="results" class="results hidden">
 
-          <!-- Sidebar -->
-          <div class="account-sidebar">
-            <div class="profile-card glass-card">
-              <div class="profile-avatar" id="profile-avatar">AJ</div>
-              <div class="profile-name">Alankar</div>
-              <div class="profile-email">naik.alankar@gmail.com</div>
-              <div class="plan-badge">✦ Pro Plan</div>
-            </div>
-            <div class="account-nav-card glass-card-sm">
-              <button class="account-nav-item active" data-tab="overview">Overview</button>
-              <button class="account-nav-item" data-tab="settings">Settings</button>
-              <button class="account-nav-item" data-tab="plan">Plan &amp; Usage</button>
-            </div>
-            <button class="sign-out-btn">Sign Out</button>
+        <!-- Results header -->
+        <div class="results-header" id="results-header">
+          <button class="back-btn" id="results-back-btn">← New Analysis</button>
+          <div class="results-title-block">
+            <div class="results-title" id="results-title"></div>
+            <div class="results-meta" id="results-meta"></div>
           </div>
+          <div class="saved-indicator" id="saved-indicator" hidden>Saved to history ✓</div>
+        </div>
 
-          <!-- Main content -->
-          <div class="account-main">
-
-            <!-- Overview tab -->
-            <div id="tab-overview" class="account-tab">
-              <div class="stat-grid" id="stat-grid"></div>
-              <div class="glass-card sources-card">
-                <p class="section-label">Most Analyzed Sources</p>
-                <div id="top-sources"></div>
-              </div>
-            </div>
-
-            <!-- Settings tab -->
-            <div id="tab-settings" class="account-tab hidden">
-              <div class="glass-card settings-card">
-                <p class="section-label">Preferences</p>
-                <div class="toggle-row">
-                  <div class="toggle-info">
-                    <div class="toggle-label">Email notifications</div>
-                    <div class="toggle-sub">Get updates about new features</div>
-                  </div>
-                  <div class="toggle" data-on="false" id="toggle-email"><div class="toggle-knob"></div></div>
-                </div>
-                <div class="toggle-row">
-                  <div class="toggle-info">
-                    <div class="toggle-label">Dark mode</div>
-                    <div class="toggle-sub">Currently the only option</div>
-                  </div>
-                  <div class="toggle" data-on="true" id="toggle-dark"><div class="toggle-knob"></div></div>
-                </div>
-                <div class="toggle-row">
-                  <div class="toggle-info">
-                    <div class="toggle-label">Auto-save analyses</div>
-                    <div class="toggle-sub">Save results automatically to history</div>
-                  </div>
-                  <div class="toggle" data-on="true" id="toggle-autosave"><div class="toggle-knob"></div></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Plan & Usage tab -->
-            <div id="tab-plan" class="account-tab hidden">
-              <div class="glass-card plan-card">
-                <p class="section-label">Usage This Month</p>
-                <div class="usage-bar-row">
-                  <div class="usage-bar-labels"><span>Analyses</span><span id="usage-analyses">0 / 100</span></div>
-                  <div class="usage-track"><div class="usage-fill" id="fill-analyses" style="width:0%"></div></div>
-                </div>
-                <div class="usage-bar-row">
-                  <div class="usage-bar-labels"><span>Comparisons</span><span>0 / 30</span></div>
-                  <div class="usage-track"><div class="usage-fill" style="width:0%"></div></div>
-                </div>
-                <div class="usage-bar-row">
-                  <div class="usage-bar-labels"><span>Saved Analyses</span><span id="usage-saved">0 / 200</span></div>
-                  <div class="usage-track"><div class="usage-fill" id="fill-saved" style="width:0%"></div></div>
-                </div>
-                <div class="plan-info-box">
-                  <div class="plan-info-title">✦ Pro Plan — $9/month</div>
-                  <div class="plan-info-sub">Unlimited analyses, priority processing, and full export access.</div>
-                </div>
-              </div>
-            </div>
-
+        <!-- Score row -->
+        <div class="score-row" id="score-row">
+          <div class="score-card">
+            <div class="score-card-label">Political Lean</div>
+            <div class="score-card-value" id="sc-lean-value">—</div>
+            <div class="score-card-sub" id="sc-lean-sub"></div>
+          </div>
+          <div class="score-card">
+            <div class="score-card-label">Sentiment</div>
+            <div class="score-card-value" id="sc-sent-value">—</div>
+            <div class="score-card-sub" id="sc-sent-sub"></div>
+          </div>
+          <div class="score-card">
+            <div class="score-card-label">Fact Check</div>
+            <div class="score-card-value" id="sc-fact-value">—</div>
+            <div class="score-card-sub" id="sc-fact-sub"></div>
           </div>
         </div>
-      </div><!-- /page-account -->
+
+        <!-- Summary prose -->
+        <div class="summary-prose" id="summary-card">
+          <div class="summary-prose-label">Analysis Summary</div>
+          <p class="summary-prose-text" id="summary-prose-text"></p>
+          <span class="article-type-tag" id="article-type-tag" style="display:none"></span>
+        </div>
+
+        <!-- Political Lean accordion -->
+        <div class="accordion" id="acc-political" data-open="true">
+          <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+            <div class="acc-title-row">
+              <span class="acc-title">Political Lean</span>
+              <span class="acc-badge-pill" id="political-badge"></span>
+            </div>
+            <span class="acc-chevron open">▾</span>
+          </div>
+          <div class="acc-body" id="body-political">
+            <!-- spectrum -->
+            <div class="spectrum-wrap">
+              <div style="position:relative;margin-bottom:8px">
+                <div class="spectrum-track"></div>
+                <div class="spectrum-dot" id="spectrum-dot"></div>
+              </div>
+              <div class="spectrum-labels">
+                <span>Left</span><span>Center</span><span>Right</span>
+              </div>
+            </div>
+            <p class="conf-line" id="political-conf"></p>
+            <p class="body-text" id="political-explanation"></p>
+
+            <div class="subsection" id="framing-section">
+              <p class="sub-label">Framing Choices</p>
+              <div class="quote-list" id="quote-list"></div>
+            </div>
+            <div class="subsection" id="sources-section">
+              <p class="sub-label">Source Selection</p>
+              <p class="body-text" id="source-summary"></p>
+              <div class="source-tags" id="source-tags"></div>
+            </div>
+            <div class="subsection" id="omissions-section">
+              <p class="sub-label">Notable Omissions</p>
+              <div class="omission-list" id="omission-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sentiment accordion -->
+        <div class="accordion" id="acc-sentiment" data-open="false">
+          <div class="acc-head" role="button" tabindex="0" aria-expanded="false">
+            <div class="acc-title-row">
+              <span class="acc-title">Sentiment</span>
+              <span class="acc-badge-pill" id="sentiment-badge"></span>
+            </div>
+            <span class="acc-chevron">▾</span>
+          </div>
+          <div class="acc-body hidden" id="body-sentiment">
+            <div>
+              <div class="gauge-track">
+                <div class="gauge-cover" id="gauge-fill"></div>
+              </div>
+              <div class="gauge-labels">
+                <span>Very Negative</span><span>Neutral</span><span>Very Positive</span>
+              </div>
+            </div>
+            <p class="body-text" id="sentiment-explanation"></p>
+          </div>
+        </div>
+
+        <!-- Fact Check accordion -->
+        <div class="accordion" id="acc-fact" data-open="true">
+          <div class="acc-head" role="button" tabindex="0" aria-expanded="true">
+            <div class="acc-title-row">
+              <span class="acc-title">Fact Check</span>
+              <span class="acc-badge-pill" id="fact-badge"></span>
+            </div>
+            <span class="acc-chevron open">▾</span>
+          </div>
+          <div class="acc-body" id="body-fact">
+            <p class="body-text" id="fact-summary"></p>
+            <div class="claim-list" id="claim-list"></div>
+          </div>
+        </div>
+
+        <!-- Broaden Your View -->
+        <div class="broaden-wrap" id="broaden-section">
+          <div class="broaden-heading">Broaden Your View</div>
+          <p class="broaden-sub">Explore how other outlets frame this story differently.</p>
+          <div class="broaden-grid" id="broaden-grid"></div>
+        </div>
+
+        <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
+
+      </section>
+
+      <!-- ── Compare Results ────────────────────────────────────────────── -->
+      <section id="compare-results" class="compare-results hidden">
+        <div class="compare-columns" id="compare-columns"></div>
+        <p class="disclaimer">AI analysis is an estimate, not ground truth. Always read critically.</p>
+      </section>
+
+      </section><!-- /page-home -->
+
+    <section class="page-section" id="page-history" hidden>
+      <div class="page-header">
+        <div class="page-title">My History</div>
+        <p class="page-sub">All your analyzed articles, saved automatically.</p>
+        <div class="search-bar">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="history-search" placeholder="Search your history…" autocomplete="off" />
+        </div>
+      </div>
+
+      <div id="history-list"></div>
+
+      <div style="text-align:center;margin-top:24px">
+        <button class="load-more-btn" id="history-load-more" hidden>Load more</button>
+      </div>
+    </section>
+
+    <section class="page-section" id="page-account" hidden>
+      <div class="page-header" style="padding-bottom:0">
+        <div class="page-title">Account</div>
+      </div>
+
+      <div class="account-grid" style="padding-top:24px">
+        <!-- Sidebar -->
+        <div class="account-sidebar">
+          <div class="profile-card">
+            <div class="profile-avatar" id="profile-avatar">?</div>
+            <div class="profile-name" id="profile-name">—</div>
+            <div class="profile-email" id="profile-email">—</div>
+            <div class="plan-badge" id="plan-badge">Free Plan</div>
+          </div>
+
+          <div class="side-nav">
+            <div class="side-nav-item active" data-accsec="overview">Overview</div>
+            <div class="side-nav-item" data-accsec="plan">Plan &amp; Usage</div>
+            <div class="side-nav-item" data-accsec="danger">Danger Zone</div>
+          </div>
+
+          <button class="logout-btn" id="account-signout-btn">Sign Out</button>
+        </div>
+
+        <!-- Main -->
+        <div class="account-main">
+          <!-- Overview -->
+          <div class="account-section" id="accsec-overview">
+            <div class="section-title">Your Activity</div>
+            <div class="stat-grid" id="account-stat-grid">
+              <div class="stat-card">
+                <div class="stat-label">Analyses</div>
+                <div class="stat-value val-cyan" id="stat-analyses">—</div>
+                <div class="stat-sub">this month</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Comparisons</div>
+                <div class="stat-value val-purple" id="stat-comparisons">—</div>
+                <div class="stat-sub">this month</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Saved</div>
+                <div class="stat-value val-green" id="stat-saved">—</div>
+                <div class="stat-sub">total in history</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Most Analyzed Sources -->
+          <div class="account-section" id="accsec-sources" style="margin-top:32px">
+            <div class="section-title">Most Analyzed Sources</div>
+            <div id="top-sources-list">
+              <div class="empty-text" style="padding:20px 0">Analyze a few articles to see your top sources.</div>
+            </div>
+          </div>
+
+          <!-- Plan & Usage -->
+          <div class="account-section hidden" id="accsec-plan">
+            <div class="section-title">Plan &amp; Usage</div>
+            <div class="usage-bar-wrap">
+              <div class="usage-bar-label">
+                <span>Monthly analyses</span>
+                <span id="usage-bar-count" style="color:var(--text)">— / —</span>
+              </div>
+              <div class="usage-bar-track">
+                <div class="usage-bar-fill" id="usage-bar-fill" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="plan-info-box">
+              <div class="plan-info-title" id="plan-info-title">Free Plan</div>
+              <div class="plan-info-desc" id="plan-info-desc">3 analyses per month.</div>
+            </div>
+            <button class="cta-btn" id="account-upgrade-btn" style="margin-top:16px">Upgrade to Pro — $7.99/month</button>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="account-section hidden" id="accsec-danger">
+            <div class="section-title">Danger Zone</div>
+            <p style="font-size:14px;color:var(--muted);margin-bottom:20px">Permanently delete your account and all saved history. This cannot be undone.</p>
+            <button class="danger-btn" id="delete-account-btn">Delete my account</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Upgrade modal -->
+    <div class="modal-overlay" id="upgrade-modal" hidden>
+      <div class="modal-box glass-card">
+        <h3>You've used all your free analyses</h3>
+        <p>Free accounts get 3 analyses per month. Upgrade for 30 analyses/month.</p>
+        <div class="modal-pricing">
+          <span class="modal-price">$7.99</span>
+          <span class="modal-period">/month</span>
+        </div>
+        <button class="cta-btn" id="upgrade-btn">Subscribe — $7.99/month</button>
+        <button class="modal-cancel" onclick="document.getElementById('upgrade-modal').hidden=true">Maybe later</button>
+      </div>
+    </div>
 
     </div><!-- /container -->
 
@@ -376,6 +407,9 @@
 
   </div><!-- /app -->
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="auth.js"></script>
+  <script src="history.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
