@@ -47,13 +47,33 @@ function clearError() {
   errorText.textContent = "";
 }
 
+const _LOADING_STAGES = [
+  { delay: 0,    text: "Fetching article…" },
+  { delay: 2500, text: "Reading the framing…" },
+  { delay: 6000, text: "Checking facts…" },
+  { delay: 9500, text: "Finding alternative perspectives…" },
+  { delay: 13000, text: "Finalizing your analysis…" },
+];
+let _loadingTimers = [];
+
+function _clearLoadingTimers() {
+  _loadingTimers.forEach(clearTimeout);
+  _loadingTimers = [];
+}
+
 function setLoading(on) {
   analyzeBtn.classList.toggle("loading", on);
   analyzeBtn.disabled = on;
   const label = analyzeBtn.querySelector(".btn-label");
   if (!label) return;
+  _clearLoadingTimers();
   if (on) {
-    label.textContent = _activeMode === 'compare' ? "Comparing…" : "Analyzing…";
+    const prefix = _activeMode === 'compare' ? "Comparing — " : "";
+    _LOADING_STAGES.forEach(stage => {
+      _loadingTimers.push(setTimeout(() => {
+        label.textContent = prefix + stage.text;
+      }, stage.delay));
+    });
   } else {
     label.textContent = _activeMode === 'compare' ? "Compare Articles" : "Analyze Article";
   }

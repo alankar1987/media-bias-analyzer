@@ -408,7 +408,7 @@ nav {
   border-radius: 50%;
   animation: spin .7s linear infinite;
 }
-.analyze-btn.loading .btn-label { display: none; }
+.analyze-btn.loading .btn-label { display: inline; opacity: .9; }
 .analyze-btn.loading .btn-spinner { display: block; }
 .analyze-btn.loading .btn-arrow { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
