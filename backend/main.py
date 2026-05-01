@@ -284,19 +284,26 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
             )
 
     # ── Anonymous: cookie + IP rate limit ──────────────────────────────────
+    # Chrome-extension origins skip these — the cookie gate is a sign-up nag
+    # that doesn't apply (no sign-up flow in the extension), and the strict IP
+    # cap (5/h) is too low for typical multi-article browsing. Abuse protection
+    # for the extension surface relies on Anthropic's own rate limits + the
+    # backend's content_hash cache (repeat URLs don't burn credits).
     if user is None:
-        anon_cookie = request.cookies.get(ANON_COOKIE_NAME)
-        if anon_cookie:
-            return JSONResponse(
-                status_code=429,
-                content={"success": False, "error": "anon_limit", "message": "Sign up free for 3 analyses/month."},
-            )
-        client_ip = request.headers.get("x-forwarded-for", request.client.host).split(",")[0].strip()
-        if not get_limiter().check_ip(client_ip):
-            return JSONResponse(
-                status_code=429,
-                content={"success": False, "error": "rate_limited", "message": "Too many requests. Try again later."},
-            )
+        is_extension = request.headers.get("origin", "").startswith("chrome-extension://")
+        if not is_extension:
+            anon_cookie = request.cookies.get(ANON_COOKIE_NAME)
+            if anon_cookie:
+                return JSONResponse(
+                    status_code=429,
+                    content={"success": False, "error": "anon_limit", "message": "Sign up free for 3 analyses/month."},
+                )
+            client_ip = request.headers.get("x-forwarded-for", request.client.host).split(",")[0].strip()
+            if not get_limiter().check_ip(client_ip):
+                return JSONResponse(
+                    status_code=429,
+                    content={"success": False, "error": "rate_limited", "message": "Too many requests. Try again later."},
+                )
 
     article_text = req.text
     source_url = req.url
