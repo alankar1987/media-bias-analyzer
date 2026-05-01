@@ -915,3 +915,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ── ?url=<encoded> auto-analyze ──────────────────────────────────────────────
+// The Chrome extension links here as "Open full report on veris.news".
+// On load, if a ?url= param is present, fill the input and run analyze.
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fromExt = params.get('url');
+    if (!fromExt) return;
+    if (urlInput) urlInput.value = fromExt;
+    // Defer one tick so other DOMContentLoaded handlers (auth, history) run first.
+    setTimeout(() => analyzeArticle(), 0);
+  } catch (err) {
+    console.warn('[veris] ?url= autofill failed:', err);
+  }
+});
