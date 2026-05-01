@@ -84,18 +84,16 @@ async def extract_text_from_url(url: str) -> Tuple[str, str]:
     lines = [ln.strip() for ln in raw.splitlines() if len(ln.strip()) > 30]
     cleaned = "\n".join(lines[:300])
 
+    # Paywall heuristic: signals applied ONLY when extraction also failed to
+    # find enough body text. Newsletter footers and "Subscribe" CTAs trip these
+    # signals on plenty of fully-open articles (e.g., tribuneindia.com), so we
+    # don't treat them as paywalled if the article body itself is present.
     _PAYWALL_SIGNALS = [
         "subscribe to read", "subscription required", "subscribers only",
         "sign in to read", "create an account to read", "premium content",
         "to continue reading", "continue reading with", "unlock this article",
         "already a subscriber", "get full access", "read the full story",
     ]
-    page_text_lower = response.text.lower()
-    if any(signal in page_text_lower for signal in _PAYWALL_SIGNALS):
-        raise ValueError(
-            "This article appears to be behind a paywall. "
-            "Please copy and paste the article text directly into the text box below."
-        )
 
     if len(cleaned) < 200:
         # Try trafilatura on the already-fetched HTML (no extra network call)
@@ -103,6 +101,13 @@ async def extract_text_from_url(url: str) -> Tuple[str, str]:
         if extracted and len(extracted.strip()) >= 200:
             cleaned = extracted.strip()
         else:
+            # Body is truly short — now check whether paywall language is present.
+            page_text_lower = response.text.lower()
+            if any(signal in page_text_lower for signal in _PAYWALL_SIGNALS):
+                raise ValueError(
+                    "This article appears to be behind a paywall. "
+                    "Please copy and paste the article text directly into the text box below."
+                )
             # Last resort: Jina AI reader (extra network call, ~2-5s)
             async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), follow_redirects=True) as jina_client:
                 jina_resp = await jina_client.get(f"https://r.jina.ai/{url}", headers={"Accept": "text/plain"})
