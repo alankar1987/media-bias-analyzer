@@ -50,6 +50,7 @@ app.add_middleware(
         "http://localhost:8787",
         "http://localhost:8080",
     ],
+    allow_origin_regex=r"chrome-extension://.*",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
