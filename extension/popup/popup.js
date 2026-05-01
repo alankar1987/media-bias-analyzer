@@ -181,6 +181,36 @@ function renderResults(tab, data) {
 
   const summary = data.summary || "";
 
+  // ── Broaden Your View — alt-coverage cards ──
+  // Each item: { outlet, perspective, angle, why }. We render perspective as
+  // a colored tag (CSS class on .vp-bc-tag), and clicking the card opens a
+  // Google search for "<outlet> <angle>" — same approach as veris.news.
+  const broaden = (data.broaden_your_view || []).slice(0, 3);
+  const broadenHtml = broaden.length ? `
+    <div class="vp-section">
+      <div class="vp-section-h">
+        <span>Broaden Your View</span>
+        <span class="count">${broaden.length} angle${broaden.length === 1 ? "" : "s"}</span>
+      </div>
+      <div class="vp-broaden">
+        ${broaden.map((b) => {
+          const perspective = (b.perspective || "independent").toLowerCase().split(/\s+/)[0];
+          const searchUrl = `https://www.google.com/search?q=${encodeURIComponent((b.outlet || "") + " " + (b.angle || ""))}`;
+          return `
+            <a class="vp-bcard" href="${escapeHtml(searchUrl)}" target="_blank" rel="noopener noreferrer">
+              <span class="vp-bc-tag ${escapeHtml(perspective)}">${escapeHtml(b.perspective || "")}</span>
+              <div class="vp-bc-mid">
+                <div class="vp-bc-outlet">${escapeHtml(b.outlet || "")}</div>
+                <div class="vp-bc-angle">${escapeHtml(b.angle || "")}</div>
+              </div>
+              <span class="vp-bc-arrow">↗</span>
+            </a>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  ` : "";
+
   // The website opens a previously-analyzed URL by accepting ?url=<encoded>
   // on the home page (added in Task 9).
   const fullReportHref = `${VERIS_HOME}?url=${encodeURIComponent(tab.url)}`;
@@ -209,6 +239,7 @@ function renderResults(tab, data) {
       </div>
     </div>
     ${summary ? `<div class="vp-summary">${escapeHtml(summary)}</div>` : ""}
+    ${broadenHtml}
     <div class="vp-cta">
       <button class="vp-cta-primary" id="btn-full">Open full report on Veris ↗</button>
     </div>

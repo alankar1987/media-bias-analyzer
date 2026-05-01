@@ -51,6 +51,23 @@ html,body{width:380px;background:#0a0d12;color:#fff;font-family:'DM Sans',system
 /* ── Summary block ─────────────────────────────── */
 .vp-summary{padding:0 18px 14px;font-size:12.5px;line-height:1.55;color:rgba(255,255,255,0.78)}
 
+/* ── Broaden Your View ─────────────────────────── */
+.vp-section{padding:14px 18px;border-top:1px solid rgba(255,255,255,0.06)}
+.vp-section-h{font-size:10px;letter-spacing:1.8px;color:rgba(255,255,255,0.5);text-transform:uppercase;font-weight:600;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.vp-section-h .count{color:#22d3ee}
+.vp-broaden{display:flex;flex-direction:column;gap:6px}
+.vp-bcard{padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s;text-decoration:none;color:inherit}
+.vp-bcard:hover{background:rgba(255,255,255,0.07)}
+.vp-bc-tag{font-size:9px;font-weight:700;padding:3px 7px;border-radius:99px;letter-spacing:1px;text-transform:uppercase;flex-shrink:0;text-align:center}
+.vp-bc-tag.conservative{background:rgba(239,68,68,0.18);color:#fca5a5}
+.vp-bc-tag.liberal,.vp-bc-tag.left,.vp-bc-tag.progressive{background:rgba(96,165,250,0.18);color:#93c5fd}
+.vp-bc-tag.international{background:rgba(34,211,238,0.18);color:#67e8f9}
+.vp-bc-tag.independent,.vp-bc-tag.center,.vp-bc-tag.neutral{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7)}
+.vp-bc-mid{flex:1;min-width:0}
+.vp-bc-outlet{font-size:11.5px;font-weight:600;color:#fff;margin-bottom:2px}
+.vp-bc-angle{font-size:11px;color:rgba(255,255,255,0.6);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vp-bc-arrow{color:rgba(255,255,255,0.3);font-size:14px;flex-shrink:0}
+
 /* ── Bottom CTA row ────────────────────────────── */
 .vp-cta{padding:12px 14px;border-top:1px solid rgba(255,255,255,0.06)}
 
