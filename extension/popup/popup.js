@@ -144,6 +144,27 @@ function renderResults(tab, data) {
   const tone  = sn.label || "—";
   const facts = fc.score != null ? `${fc.score}/100` : "—";
 
+  // Color cues match veris.news (leanBadgeColor / sentBadgeColor / factBadgeColor).
+  const MUTED = "rgba(255,255,255,0.55)";
+  const leanColor = (() => {
+    const l = (pl.label || "").toLowerCase();
+    if (l.includes("left"))  return "#22d3ee";
+    if (l.includes("right")) return "#ef4444";
+    return MUTED;
+  })();
+  const toneColor = (() => {
+    const l = (sn.label || "").toLowerCase();
+    if (l.includes("positive")) return "#10b981";
+    if (l.includes("negative")) return "#ef4444";
+    return MUTED;
+  })();
+  const factsColor = (() => {
+    if (fc.score == null) return MUTED;
+    if (fc.score >= 75) return "#10b981";
+    if (fc.score >= 50) return "#f59e0b";
+    return "#ef4444";
+  })();
+
   const summary = data.summary || "";
 
   // The website opens a previously-analyzed URL by accepting ?url=<encoded>
@@ -162,15 +183,15 @@ function renderResults(tab, data) {
     <div class="vp-scores">
       <div class="vp-score">
         <div class="vp-score-label">Lean</div>
-        <div class="vp-score-val">${escapeHtml(String(lean))}</div>
+        <div class="vp-score-val" style="color:${leanColor}">${escapeHtml(String(lean))}</div>
       </div>
       <div class="vp-score">
         <div class="vp-score-label">Tone</div>
-        <div class="vp-score-val">${escapeHtml(String(tone))}</div>
+        <div class="vp-score-val" style="color:${toneColor}">${escapeHtml(String(tone))}</div>
       </div>
       <div class="vp-score">
         <div class="vp-score-label">Facts</div>
-        <div class="vp-score-val">${escapeHtml(String(facts))}</div>
+        <div class="vp-score-val" style="color:${factsColor}">${escapeHtml(String(facts))}</div>
       </div>
     </div>
     ${summary ? `<div class="vp-summary">${escapeHtml(summary)}</div>` : ""}
