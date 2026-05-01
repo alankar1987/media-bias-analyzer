@@ -41,7 +41,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true });
 
           // Fire and forget — the popup uses ANALYSIS_COMPLETE / GET_STATE to update.
-          const envelope = await analyzeUrl(url);
+          // analyzeUrl throws on network/CORS failures; if we don't catch that here
+          // the outer try/catch fires AFTER sendResponse, leaving state stuck on
+          // "analyzing" and the popup spinning forever.
+          let envelope;
+          try {
+            envelope = await analyzeUrl(url);
+          } catch (err) {
+            console.error("[Veris bg] analyzeUrl threw", err);
+            envelope = { success: false, error: err.message || "Network error" };
+          }
           if (envelope.success) {
             state.set(tabId, { url, status: "done", result: envelope.data });
           } else {
