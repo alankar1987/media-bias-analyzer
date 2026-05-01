@@ -135,10 +135,14 @@ function renderResults(tab, data) {
   })();
   const sourceName = data.source?.name || domain;
 
-  const scores = data.scores || {};
-  const lean   = scores.lean   ?? data.lean   ?? "—";
-  const tone   = scores.tone   ?? data.tone   ?? "—";
-  const facts  = scores.facts  ?? data.facts  ?? "—";
+  // Field map: backend returns political_lean / sentiment / fact_check, each
+  // with a `.label` (or `.score` for facts). Match what frontend/script.js does.
+  const pl = data.political_lean || {};
+  const sn = data.sentiment      || {};
+  const fc = data.fact_check     || {};
+  const lean  = pl.label || "—";
+  const tone  = sn.label || "—";
+  const facts = fc.score != null ? `${fc.score}/100` : "—";
 
   const summary = data.summary || "";
 
