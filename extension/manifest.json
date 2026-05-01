@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Veris — Bias & Fact Analysis",
+  "version": "0.1.0",
+  "description": "Analyze the news article in the current tab for political lean, tone, and factual accuracy.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Veris — analyze this article",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab"]
+}
