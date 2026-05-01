@@ -5,12 +5,19 @@ const root = document.getElementById("root");
 
 const VERIS_HOME = "https://veris.news/";
 
+// Loading stages roughly track the backend's sequence (extract → frame →
+// fact-check → alt-coverage → format). Fresh analyses can take 60-120s on
+// long opinion pieces, so the later stages reassure the user we're still
+// working rather than hung. Times in ms.
 const LOADING_STAGES = [
-  { at: 0,    text: "Fetching the article" },
-  { at: 2500, text: "Reading framing" },
-  { at: 6000, text: "Checking facts" },
-  { at: 9500, text: "Finding alternative perspectives" },
-  { at: 13000, text: "Finalizing" },
+  { at: 0,     text: "Fetching the article" },
+  { at: 2500,  text: "Reading framing" },
+  { at: 6000,  text: "Checking facts" },
+  { at: 12000, text: "Finding alternative perspectives" },
+  { at: 25000, text: "Cross-referencing sources" },
+  { at: 45000, text: "Still working — long article" },
+  { at: 75000, text: "Almost there" },
+  { at: 110000, text: "Wrapping up" },
 ];
 
 let _loadingTimers = [];
@@ -84,7 +91,7 @@ function renderIdle(tab) {
     document.getElementById("btn-analyze").disabled = true;
     console.log("[Veris popup] sending ANALYZE", { tabId: tab.id, url: tab.url, tab });
     await chrome.runtime.sendMessage({ type: "ANALYZE", tabId: tab.id, url: tab.url });
-    renderLoading(tab);
+    renderLoading(tab, Date.now());
   });
 }
 
@@ -102,24 +109,31 @@ function renderUnsupported(tab) {
 }
 
 // ── State: loading ──
-function renderLoading(tab) {
+// startedAt is the worker-side timestamp for when /analyze was kicked off.
+// When the popup is reopened mid-analysis we want to resume the rotating
+// messages from the right point, not start over at "Fetching".
+function renderLoading(tab, startedAt) {
   clearLoadingTimers();
+  const elapsed = startedAt ? Date.now() - startedAt : 0;
+  // Pick the latest stage whose `at` <= elapsed.
+  const initial = [...LOADING_STAGES].reverse().find((s) => s.at <= elapsed) || LOADING_STAGES[0];
   root.innerHTML = `
     ${header("Analyzing article…")}
     ${articleRow(tab)}
     <div class="vp-loading">
       <div class="vp-loading-ring"></div>
-      <div class="vp-loading-title" id="loading-title">${escapeHtml(LOADING_STAGES[0].text)}</div>
-      <div class="vp-loading-sub">This usually takes 5–15 seconds</div>
+      <div class="vp-loading-title" id="loading-title">${escapeHtml(initial.text)}</div>
+      <div class="vp-loading-sub">Fresh articles can take up to 2 minutes</div>
     </div>
   `;
   bindClose();
-  // Schedule rotating progress messages.
-  for (const stage of LOADING_STAGES.slice(1)) {
+  // Schedule remaining stages relative to when the analysis started.
+  for (const stage of LOADING_STAGES) {
+    if (stage.at <= elapsed) continue;
     _loadingTimers.push(setTimeout(() => {
       const el = document.getElementById("loading-title");
       if (el) el.textContent = stage.text;
-    }, stage.at));
+    }, stage.at - elapsed));
   }
 }
 
@@ -235,7 +249,7 @@ async function init() {
     renderUnsupported(tab);
     return;
   }
-  if (resp.status === "analyzing") renderLoading(tab);
+  if (resp.status === "analyzing") renderLoading(tab, resp.entry?.startedAt);
   else if (resp.status === "done") renderResults(tab, resp.entry.result);
   else if (resp.status === "error") renderError(tab, resp.entry?.error);
   else renderIdle(tab);
