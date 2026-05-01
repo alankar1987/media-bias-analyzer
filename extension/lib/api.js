@@ -14,14 +14,19 @@ export async function analyzeUrl(url) {
     body: JSON.stringify({ url }),
   });
 
+  // Read the body either way — backend includes useful error messages
+  // ({success:false, error, message} for rate limits; {detail:"..."} for HTTPException).
+  let body = null;
+  try { body = await resp.json(); } catch { /* non-JSON body */ }
+
   if (!resp.ok) {
-    // Surface the HTTP status as the error so the popup can render it.
-    return {
-      success: false,
-      error: `Backend returned HTTP ${resp.status}`,
-      source_url: url,
-    };
+    const reason =
+      body?.detail ||
+      body?.message ||
+      body?.error ||
+      `Backend returned HTTP ${resp.status}`;
+    return { success: false, error: reason, source_url: url };
   }
 
-  return await resp.json();
+  return body || { success: false, error: "Empty response", source_url: url };
 }

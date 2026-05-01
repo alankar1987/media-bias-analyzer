@@ -37,6 +37,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             sendResponse({ ok: false, error: "missing tabId or url" });
             return;
           }
+          console.log("[Veris bg] ANALYZE received", { tabId, url, urlType: typeof url, urlLen: url?.length });
           state.set(tabId, { url, status: "analyzing" });
           sendResponse({ ok: true });
 
