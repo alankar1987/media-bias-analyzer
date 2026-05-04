@@ -49,9 +49,8 @@ function header(status) {
     <div class="vp-head">
       <div class="vp-h-left">
         <div class="vp-logo">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M8 9 L12 17 L16 9"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12 L10 17 L19 7"/>
           </svg>
         </div>
         <div>
