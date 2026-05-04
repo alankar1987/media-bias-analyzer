@@ -22,5 +22,5 @@
     "service_worker": "background/service-worker.js",
     "type": "module"
   },
-  "permissions": ["activeTab", "storage", "alarms"]
+  "permissions": ["activeTab", "storage", "alarms", "identity"]
 }
