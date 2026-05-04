@@ -5,7 +5,7 @@ html,body{width:380px;background:#0a0d12;color:#fff;font-family:'DM Sans',system
 /* ── Header ─────────────────────────────────────── */
 .vp-head{padding:16px 18px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06)}
 .vp-h-left{display:flex;align-items:center;gap:9px}
-.vp-logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#22d3ee,#a855f7);display:flex;align-items:center;justify-content:center}
+.vp-logo{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#a855f7);display:flex;align-items:center;justify-content:center}
 .vp-h-name{font-size:15px;font-weight:700;letter-spacing:-.2px}
 .vp-h-status{font-size:10.5px;color:rgba(255,255,255,0.45);margin-top:1px}
 .vp-h-right{display:flex;align-items:center;gap:6px}
