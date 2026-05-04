@@ -120,7 +120,7 @@ function toggleAccountMenu() {
   const menu = document.createElement("div");
   menu.id = "vp-acct-menu";
   menu.className = "vp-acct-menu";
-  const used = _usage?.used ?? "—";
+  const used = _usage?.analyses_this_month ?? _usage?.used ?? "—";
   const limit = _usage?.limit ?? "—";
   const tier = (_usage?.tier || "free").toLowerCase();
   const tierLabel = tier === "paid" ? "Pro" : "Free";
@@ -149,8 +149,9 @@ function toggleAccountMenu() {
         _usage = r.usage;
         const q = menu.querySelector(".vp-acct-quota");
         if (q) {
+          const u = r.usage.analyses_this_month ?? r.usage.used ?? "—";
           const t = (r.usage.tier || "free").toLowerCase() === "paid" ? "Pro" : "Free";
-          q.textContent = `${r.usage.used}/${r.usage.limit} this month · ${t}`;
+          q.textContent = `${u}/${r.usage.limit} this month · ${t}`;
         }
       }
     });
