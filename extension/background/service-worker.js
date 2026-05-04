@@ -12,7 +12,8 @@
 //      while a fetch is pending — but ALSO start a chrome.alarms keep-alive
 //      that fires every 25s as a belt-and-suspenders measure.
 
-import { analyzeUrl } from "../lib/api.js";
+import { analyzeUrl, getUsage } from "../lib/api.js";
+import { signIn, signOut, getSession } from "../lib/auth.js";
 
 const STORAGE_KEY = "veris_state_v1";
 const KEEPALIVE_ALARM = "veris_keepalive";
@@ -131,6 +132,35 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           chrome.runtime
             .sendMessage({ type: "ANALYSIS_COMPLETE", tabId })
             .catch(() => { /* popup likely closed; ignore */ });
+          break;
+        }
+
+        case "GET_SESSION": {
+          const session = await getSession();
+          sendResponse({ ok: true, session });
+          break;
+        }
+
+        case "SIGN_IN": {
+          try {
+            const session = await signIn();
+            sendResponse({ ok: true, session });
+          } catch (err) {
+            console.warn("[Veris bg] sign-in failed", err);
+            sendResponse({ ok: false, error: err.message || "Sign-in failed" });
+          }
+          break;
+        }
+
+        case "SIGN_OUT": {
+          await signOut();
+          sendResponse({ ok: true });
+          break;
+        }
+
+        case "GET_USAGE": {
+          const usage = await getUsage();
+          sendResponse({ ok: true, usage });
           break;
         }
 

@@ -21,6 +21,11 @@ const LOADING_STAGES = [
 ];
 
 let _loadingTimers = [];
+// Module-level cached session — read once on init() and refreshed after sign-
+// in/out. Used by header() so the auth slot reflects current state without
+// the popup having to re-message the worker on every render.
+let _session = null;
+let _usage = null;
 
 function clearLoadingTimers() {
   _loadingTimers.forEach((t) => clearTimeout(t));
@@ -36,6 +41,10 @@ function escapeHtml(s) {
 }
 
 function header(status) {
+  const session = _session;
+  const authSlot = session
+    ? `<button class="vp-h-avatar" id="btn-avatar" title="${escapeHtml(session.user?.email || "Account")}">${escapeHtml((session.user?.email?.[0] || "?").toUpperCase())}</button>`
+    : `<button class="vp-h-signin" id="btn-signin" title="Sign in to track your analyses">Sign in</button>`;
   return `
     <div class="vp-head">
       <div class="vp-h-left">
@@ -50,7 +59,10 @@ function header(status) {
           <div class="vp-h-status">${escapeHtml(status)}</div>
         </div>
       </div>
-      <button class="vp-h-x" id="btn-x" title="Close">×</button>
+      <div class="vp-h-right">
+        ${authSlot}
+        <button class="vp-h-x" id="btn-x" title="Close">×</button>
+      </div>
     </div>
   `;
 }
@@ -72,8 +84,77 @@ function articleRow(tab) {
   `;
 }
 
-function bindClose() {
+function bindHeader() {
   document.getElementById("btn-x")?.addEventListener("click", () => window.close());
+  document.getElementById("btn-signin")?.addEventListener("click", handleSignIn);
+  document.getElementById("btn-avatar")?.addEventListener("click", toggleAccountMenu);
+}
+
+async function handleSignIn() {
+  const btn = document.getElementById("btn-signin");
+  if (btn) { btn.disabled = true; btn.textContent = "Signing in…"; }
+  const resp = await chrome.runtime.sendMessage({ type: "SIGN_IN" });
+  if (resp?.ok && resp.session) {
+    _session = resp.session;
+    _usage = null;
+    init();   // re-render with the avatar
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = "Sign in"; }
+    if (resp?.error && !/cancel/i.test(resp.error)) {
+      console.warn("[Veris popup] sign-in error:", resp.error);
+    }
+  }
+}
+
+async function handleSignOut() {
+  await chrome.runtime.sendMessage({ type: "SIGN_OUT" });
+  _session = null;
+  _usage = null;
+  init();
+}
+
+function toggleAccountMenu() {
+  const existing = document.getElementById("vp-acct-menu");
+  if (existing) { existing.remove(); return; }
+  if (!_session) return;
+  const menu = document.createElement("div");
+  menu.id = "vp-acct-menu";
+  menu.className = "vp-acct-menu";
+  const used = _usage?.used ?? "—";
+  const limit = _usage?.limit ?? "—";
+  const tier = (_usage?.tier || "free").toLowerCase();
+  const tierLabel = tier === "paid" ? "Pro" : "Free";
+  menu.innerHTML = `
+    <div class="vp-acct-email">${escapeHtml(_session.user?.email || "")}</div>
+    <div class="vp-acct-quota">${escapeHtml(String(used))}/${escapeHtml(String(limit))} this month · ${escapeHtml(tierLabel)}</div>
+    <a class="vp-acct-link" href="${VERIS_HOME}#history" target="_blank" rel="noopener noreferrer">View My History ↗</a>
+    <a class="vp-acct-link" href="${VERIS_HOME}#account" target="_blank" rel="noopener noreferrer">Account &amp; billing ↗</a>
+    <button class="vp-acct-signout" id="btn-signout">Sign out</button>
+  `;
+  document.body.appendChild(menu);
+  document.getElementById("btn-signout").addEventListener("click", handleSignOut);
+  // Click outside to close.
+  setTimeout(() => {
+    document.addEventListener("click", function close(e) {
+      if (!menu.contains(e.target) && e.target.id !== "btn-avatar") {
+        menu.remove();
+        document.removeEventListener("click", close);
+      }
+    });
+  }, 0);
+  // Lazy-load usage if we don't have it yet.
+  if (!_usage) {
+    chrome.runtime.sendMessage({ type: "GET_USAGE" }).then((r) => {
+      if (r?.ok && r.usage) {
+        _usage = r.usage;
+        const q = menu.querySelector(".vp-acct-quota");
+        if (q) {
+          const t = (r.usage.tier || "free").toLowerCase() === "paid" ? "Pro" : "Free";
+          q.textContent = `${r.usage.used}/${r.usage.limit} this month · ${t}`;
+        }
+      }
+    });
+  }
 }
 
 // ── State: idle (analyzable URL, awaiting click) ──
@@ -86,7 +167,7 @@ function renderIdle(tab) {
       <button class="vp-cta-primary" id="btn-analyze">Analyze this page</button>
     </div>
   `;
-  bindClose();
+  bindHeader();
   document.getElementById("btn-analyze")?.addEventListener("click", async () => {
     document.getElementById("btn-analyze").disabled = true;
     console.log("[Veris popup] sending ANALYZE", { tabId: tab.id, url: tab.url, tab });
@@ -105,7 +186,7 @@ function renderUnsupported(tab) {
       Veris analyzes news article pages on the open web.
     </div>
   `;
-  bindClose();
+  bindHeader();
 }
 
 // ── State: loading ──
@@ -126,7 +207,7 @@ function renderLoading(tab, startedAt) {
       <div class="vp-loading-sub">Fresh articles can take up to 2 minutes</div>
     </div>
   `;
-  bindClose();
+  bindHeader();
   // Schedule remaining stages relative to when the analysis started.
   for (const stage of LOADING_STAGES) {
     if (stage.at <= elapsed) continue;
@@ -244,7 +325,7 @@ function renderResults(tab, data) {
       <button class="vp-cta-primary" id="btn-full">Open full report on Veris ↗</button>
     </div>
   `;
-  bindClose();
+  bindHeader();
   document.getElementById("btn-full")?.addEventListener("click", () => {
     chrome.tabs.create({ url: fullReportHref });
     window.close();
@@ -254,15 +335,22 @@ function renderResults(tab, data) {
 // ── State: error ──
 function renderError(tab, message) {
   clearLoadingTimers();
+  // Quota-exceeded is a known case worth a tailored CTA — backend returns
+  // "quota_exceeded" or wording like "Sign up free" / "upgrade".
+  const lower = String(message || "").toLowerCase();
+  const isQuota = lower.includes("quota") || lower.includes("upgrade") || lower.includes("sign up");
+  const cta = isQuota
+    ? `<a class="vp-retry" href="${VERIS_HOME}#account" target="_blank" rel="noopener noreferrer">Upgrade to Pro ↗</a>`
+    : `<button class="vp-retry" id="btn-retry">Try again</button>`;
   root.innerHTML = `
     ${header("Couldn't analyze")}
     <div class="vp-empty">
-      <strong>Analysis failed</strong>
+      <strong>${escapeHtml(isQuota ? "Monthly limit reached" : "Analysis failed")}</strong>
       ${escapeHtml(message || "Please try again.")}
-      <br/><button class="vp-retry" id="btn-retry">Try again</button>
+      <br/>${cta}
     </div>
   `;
-  bindClose();
+  bindHeader();
   document.getElementById("btn-retry")?.addEventListener("click", () => {
     if (tab && tab.url) renderIdle(tab);
   });
@@ -270,6 +358,11 @@ function renderError(tab, message) {
 
 // ── Boot ──
 async function init() {
+  // Load session BEFORE rendering so the header's auth slot is right on first
+  // paint (avoids a flash from "Sign in" → avatar after session arrives).
+  const sessResp = await chrome.runtime.sendMessage({ type: "GET_SESSION" });
+  _session = sessResp?.session || null;
+
   const resp = await chrome.runtime.sendMessage({ type: "GET_STATE" });
   if (!resp || !resp.ok) {
     renderError(null, "Background service worker unavailable");
