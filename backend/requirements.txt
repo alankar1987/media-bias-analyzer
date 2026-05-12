@@ -20,6 +20,7 @@ httpcore==1.0.9
 httpx==0.28.1
 idna==3.11
 jiter==0.14.0
+json-repair==0.30.3
 lxml==6.0.4
 trafilatura
 pydantic==2.13.0

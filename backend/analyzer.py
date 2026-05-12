@@ -8,6 +8,7 @@ import httpx
 from bs4 import BeautifulSoup
 import trafilatura
 import anthropic
+import json_repair
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -266,10 +267,28 @@ def analyze_content(text: str, url: Optional[str] = None) -> dict:
     if start == -1 or end <= start:
         raise ValueError(f"No JSON object found in response: {result_text[:200]}")
 
+    json_blob = result_text[start:end]
     try:
-        result = json.loads(result_text[start:end])
+        result = json.loads(json_blob)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"Malformed JSON from Claude: {exc}") from exc
+        # Claude occasionally emits malformed JSON on long outputs (missing
+        # commas, trailing commas, unescaped quotes inside string values).
+        # Repair-first salvages most of these without re-spending a Claude
+        # call (which would double the user's wait by 60-120s).
+        logger.warning("Claude JSON parse failed (%s); attempting repair", exc)
+        try:
+            result = json_repair.loads(json_blob)
+            logger.info("JSON repair succeeded")
+        except Exception as repair_exc:
+            logger.error("JSON repair also failed: %s", repair_exc)
+            raise ValueError(
+                "Could not parse the analysis result. This sometimes happens "
+                "on very long articles. Please try again."
+            ) from exc
+        if not isinstance(result, dict):
+            raise ValueError(
+                "Could not parse the analysis result. Please try again."
+            ) from exc
 
     required = {"political_lean", "sentiment", "fact_check", "summary"}
     missing = required - set(result.keys())
