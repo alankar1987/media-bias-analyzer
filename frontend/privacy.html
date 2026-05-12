@@ -37,11 +37,22 @@
       color: var(--muted-md);
       margin-bottom: 12px;
     }
+    .privacy-wrap ul {
+      padding-left: 20px;
+      margin: 4px 0 14px;
+    }
+    .privacy-wrap li {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--muted-md);
+      margin-bottom: 6px;
+    }
     .privacy-wrap a {
       color: var(--cyan);
       text-decoration: none;
     }
     .privacy-wrap a:hover { text-decoration: underline; }
+    .privacy-wrap strong { color: var(--text); }
     .back-link {
       display: inline-block;
       margin-bottom: 40px;
@@ -64,34 +75,66 @@
     <div class="privacy-wrap">
       <a href="index.html" class="back-link">← Back to Veris</a>
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated: April 19, 2026</p>
+      <p class="updated">Last updated: May 12, 2026</p>
 
-      <h2>What we do</h2>
-      <p>Veris (veris.news) is a media bias analysis tool. You submit article URLs or text, and we analyze them using AI to surface political lean, sentiment, and factual reliability.</p>
+      <p>Veris ("we", "the service", "the extension") is a tool that analyzes news articles for political lean, tone, and factual accuracy. It is available as a website (veris.news) and as a Chrome browser extension. This policy explains what data we collect and how we use it.</p>
 
-      <h2>What data we collect</h2>
-      <p>We collect only the content you explicitly submit — article URLs or pasted text. We do not collect your name, email, or any account information. We do not use cookies or tracking pixels.</p>
+      <h2>What we collect</h2>
+      <p><strong>When you analyze an article:</strong></p>
+      <ul>
+        <li>The URL of the article you are analyzing</li>
+        <li>The article's text (fetched by our backend from the URL you submit, or text you paste in)</li>
+        <li>The timestamp of the request</li>
+      </ul>
 
-      <h2>How your data is used</h2>
-      <p>Submitted content is sent to Anthropic's API for analysis. It is used solely to generate the analysis you requested and is not stored on our servers after the response is returned.</p>
-      <p>Anthropic may retain API inputs per their own <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">privacy policy</a>.</p>
+      <p><strong>If you sign in with Google (optional):</strong></p>
+      <ul>
+        <li>Your email address</li>
+        <li>A Supabase-issued authentication token</li>
+      </ul>
 
-      <h2>Data storage</h2>
-      <p>We do not store, log, or retain any article content or analysis results. Each request is processed in memory and discarded immediately after the response is sent to your browser.</p>
+      <p><strong>If you subscribe to the Pro plan (optional):</strong></p>
+      <ul>
+        <li>Billing information processed by Stripe. We do not store your card details ourselves; Stripe handles payment data per their own privacy policy.</li>
+      </ul>
+
+      <h2>What we do with it</h2>
+      <ul>
+        <li>Article URLs and text are sent to Anthropic's Claude API to perform the analysis. We do not share this data with any other third party.</li>
+        <li>Analysis results are cached by content hash for 30 days so repeat analyses of the same article are instant. The cache is shared across anonymous users.</li>
+        <li>If you are signed in, your analyses are saved to your account so they appear in "My History" on veris.news.</li>
+      </ul>
+
+      <h2>What we do not do</h2>
+      <ul>
+        <li>We do not sell your data.</li>
+        <li>We do not use your data for advertising.</li>
+        <li>We do not analyze pages other than the one you explicitly click "Analyze" on.</li>
+        <li>We do not read your tabs, history, bookmarks, or any other browser data.</li>
+      </ul>
+
+      <h2>Data retention and deletion</h2>
+      <ul>
+        <li>Anonymous analyses are retained in the cache for 30 days, then deleted.</li>
+        <li>Signed-in users' analyses are retained for as long as your account is active. You can request deletion of your account and all associated data by emailing <a href="mailto:naik.alankar@gmail.com">naik.alankar@gmail.com</a>.</li>
+      </ul>
 
       <h2>Third-party services</h2>
-      <p><strong>Anthropic</strong> — AI analysis engine. See <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">anthropic.com/privacy</a>.</p>
-      <p><strong>Cloudflare</strong> — Content delivery and DDoS protection. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">cloudflare.com/privacypolicy</a>.</p>
-      <p><strong>Railway</strong> — Backend hosting. See <a href="https://railway.app/legal/privacy" target="_blank" rel="noopener">railway.app/legal/privacy</a>.</p>
+      <p><strong>Anthropic</strong> — provides the AI model that performs analysis. <a href="https://www.anthropic.com/legal/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
+      <p><strong>Supabase</strong> — handles authentication and data storage. <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
+      <p><strong>Stripe</strong> — processes payments for the Pro plan. <a href="https://stripe.com/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
+      <p><strong>Google</strong> — provides Sign in with Google. Only your email address is shared with us.</p>
+      <p><strong>Railway</strong> — hosts the Veris backend. <a href="https://railway.app/legal/privacy" target="_blank" rel="noopener">Privacy policy</a></p>
+      <p><strong>Cloudflare</strong> — provides DNS and CDN for veris.news. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Privacy policy</a></p>
 
       <h2>Children's privacy</h2>
       <p>Veris is not directed at children under 13. We do not knowingly collect data from children.</p>
 
       <h2>Changes to this policy</h2>
-      <p>We may update this policy from time to time. Changes will be reflected by the updated date above.</p>
+      <p>We may update this policy from time to time. Material changes will be reflected by the updated date above.</p>
 
       <h2>Contact</h2>
-      <p>Questions? Email us at <a href="mailto:naik.alankar@gmail.com">naik.alankar@gmail.com</a>.</p>
+      <p>Questions or requests: <a href="mailto:naik.alankar@gmail.com">naik.alankar@gmail.com</a></p>
     </div>
 
     <footer class="site-footer">
