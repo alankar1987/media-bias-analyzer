@@ -34,9 +34,18 @@ The extension calls `POST /analyze` with `{url}` and expects the existing
 JSON envelope (`{success, data, error, source_url}`). CORS for
 `chrome-extension://*` origins is granted in `backend/main.py`.
 
-## Limits in v1
+## Current scope (v1.0.0)
 
-- Anonymous only — no sign-in, no quota tracking, no history sync to veris.news
-- No auto-detect on news sites; user must click the toolbar icon
-- No alt-coverage / framing accordion in the popup
-- Not yet on the Chrome Web Store
+- Sign in with Google — analyses count against your veris.news quota and
+  appear at `veris.news/#history`
+- Anonymous use still works (no quota tracking, capped by Anthropic rate
+  limits + per-URL cache)
+- "Broaden Your View" alt-coverage cards
+- Color-coded Lean / Tone / Facts scores matching the website
+
+## Not yet implemented
+
+- Auto-detect on news sites; user must click the toolbar icon
+- Framing accordion / per-claim breakdown (use "Open full report ↗")
+- Token refresh — Supabase access tokens last 1h; expired sessions
+  prompt the user to sign in again

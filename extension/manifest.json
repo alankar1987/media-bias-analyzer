@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Veris — Bias & Fact Analysis",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Analyze the news article in the current tab for political lean, tone, and factual accuracy.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv897UT1uDB3W6nXflsbUqH58X4DlljQLApDQMVtUSgYakzdgmcGjYzpas3fFAJifig/xOCUBRwi6TsUmUQeomm+/kURuAAMESM9JuwjYm7+3KW+r0m6LxxqV65iuOFqzo+z3nnVjBUjAAU6IrU2fP0qW6q+k/izGSpCO7eNuGB8bCytbzGw3ob9Cx0AKDIHbiOExd36rU1xxVtr0v991ZJMXeTzPqm55YXcOsWvBbmL2z++axzfbOZJYUw3Usn247yrUfks2X7XEsalhQ4kBzQHHn+OhwODm6+ZPM/KoDgy0sB4vbUNuolZd+zGrA5v+2vbcCvelK4cllLF59169WwIDAQAB",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

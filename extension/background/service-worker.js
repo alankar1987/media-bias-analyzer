@@ -103,7 +103,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             sendResponse({ ok: false, error: "missing tabId or url" });
             return;
           }
-          console.log("[Veris bg] ANALYZE received", { tabId, url, urlLen: url?.length });
           state.set(tabId, { url, status: "analyzing", startedAt: Date.now() });
           await saveState();
           setKeepAlive(true);
@@ -118,12 +117,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             console.error("[Veris bg] analyzeUrl threw", err);
             envelope = { success: false, error: err.message || "Network error" };
           }
-          const elapsed = Date.now() - (state.get(tabId)?.startedAt || Date.now());
           if (envelope.success) {
-            console.log(`[Veris bg] analysis done in ${elapsed}ms`, { tabId });
             state.set(tabId, { url, status: "done", result: envelope.data });
           } else {
-            console.warn(`[Veris bg] analysis failed in ${elapsed}ms`, envelope.error);
+            console.warn("[Veris bg] analysis failed:", envelope.error);
             state.set(tabId, { url, status: "error", error: envelope.error || "Analysis failed" });
           }
           await saveState();
