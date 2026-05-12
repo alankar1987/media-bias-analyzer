@@ -181,7 +181,6 @@ function renderIdle(tab) {
   bindHeader();
   document.getElementById("btn-analyze")?.addEventListener("click", async () => {
     document.getElementById("btn-analyze").disabled = true;
-    console.log("[Veris popup] sending ANALYZE", { tabId: tab.id, url: tab.url, tab });
     await chrome.runtime.sendMessage({ type: "ANALYZE", tabId: tab.id, url: tab.url });
     renderLoading(tab, Date.now());
   });
