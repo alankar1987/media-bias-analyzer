@@ -12,6 +12,15 @@ function showPage(name) {
   document.querySelectorAll('.nav-link').forEach(l => {
     l.classList.toggle('active', l.dataset.page === name);
   });
+  // The #results and #compare-results sections live inside #page-home, but
+  // they have their own display:flex which can race with the page-home hidden
+  // attribute in some Chrome/Safari versions — when entering from the avatar
+  // dropdown we'd see the old analysis still painted below the new page.
+  // Belt-and-suspenders: explicitly hide them whenever we leave home.
+  if (name !== 'home') {
+    document.getElementById('results')?.classList.add('hidden');
+    document.getElementById('compare-results')?.classList.add('hidden');
+  }
   if (name !== 'results') window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
