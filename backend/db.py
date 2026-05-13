@@ -105,5 +105,23 @@ def get_analysis(*, analysis_id: str, user_id: str) -> Optional[dict]:
 
 
 def delete_user(*, user_id: str) -> None:
-    """Delete user from Supabase Auth (cascades to analyses and subscriptions)."""
+    """Hard-delete a user's data and remove them from Supabase Auth.
+
+    Originally relied on a single _supabase.auth.admin.delete_user(...) call
+    and a CASCADE on the FK to auth.users. That left a real-world failure mode
+    where the analyses table is keyed by user_id but not actually cascade-
+    linked — so deleted users' history reappeared if Supabase reused/recreated
+    the same user_id (which can happen on Google re-sign-in if the auth delete
+    silently failed). Defense-in-depth: clear the rows ourselves first.
+    """
+    try:
+        _supabase.table("analyses").delete().eq("user_id", user_id).execute()
+    except Exception as exc:
+        logger.error("delete_user: failed to delete analyses for %s: %s", user_id, exc)
+    try:
+        _supabase.table("subscriptions").delete().eq("user_id", user_id).execute()
+    except Exception as exc:
+        logger.error("delete_user: failed to delete subscriptions for %s: %s", user_id, exc)
+    # Finally remove the auth user. Surface failures — the route's caller should
+    # see a 500 rather than silently returning success when this didn't work.
     _supabase.auth.admin.delete_user(user_id)
