@@ -1,3 +1,4 @@
+import io
 import os
 from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -135,3 +136,27 @@ def test_render_share_html_omits_empty_accordions():
     assert "Framing" not in html
     assert "Fact-check" not in html
     assert "Broaden your view" not in html
+
+
+def test_render_og_image_returns_png_bytes():
+    from share import render_og_image
+    png = render_og_image(SAMPLE_ANALYSIS)
+    assert isinstance(png, (bytes, bytearray))
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_render_og_image_has_correct_dimensions():
+    from share import render_og_image
+    from PIL import Image
+    png = render_og_image(SAMPLE_ANALYSIS)
+    img = Image.open(io.BytesIO(png))
+    assert img.size == (1200, 630)
+
+
+def test_render_og_image_truncates_long_headline():
+    from share import render_og_image
+    a = dict(SAMPLE_ANALYSIS)
+    a["headline"] = "A " * 200  # 400 chars
+    # Should not raise even on absurdly long headline.
+    png = render_og_image(a)
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"

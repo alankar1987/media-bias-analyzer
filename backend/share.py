@@ -135,6 +135,208 @@ def _broaden_view_section(items: list) -> str:
 </section>"""
 
 
+from PIL import Image, ImageDraw, ImageFont
+
+# RGB palette mirrored from frontend/style.css :root tokens.
+COLOR_BG = (8, 11, 15)            # #080b0f
+COLOR_TEXT = (240, 244, 248)
+COLOR_MUTED = (155, 165, 175)
+COLOR_CYAN = (34, 211, 238)
+COLOR_PURPLE = (168, 85, 247)
+COLOR_GREEN = (74, 222, 128)
+COLOR_AMBER = (251, 191, 36)
+COLOR_RED = (248, 113, 113)
+COLOR_CARD_BG = (255, 255, 255, 12)
+COLOR_CARD_BD = (255, 255, 255, 26)
+
+
+def _wrap_text(draw, text: str, font, max_width: int, max_lines: int):
+    """Greedy word-wrap; truncate with ellipsis if over max_lines."""
+    words = (text or "").split()
+    lines: list[str] = []
+    current = ""
+    for w in words:
+        candidate = (current + " " + w).strip() if current else w
+        if draw.textlength(candidate, font=font) <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = w
+            if len(lines) == max_lines:
+                break
+    if current and len(lines) < max_lines:
+        lines.append(current)
+
+    if len(lines) == max_lines and (lines == [] or len(" ".join(lines)) < len((text or "").strip())):
+        # add ellipsis to last line
+        last = lines[-1]
+        while draw.textlength(last + "…", font=font) > max_width and len(last) > 1:
+            last = last[:-1]
+        lines[-1] = last + "…"
+    return lines
+
+
+def _color_for_lean(label: Optional[str]):
+    if not label:
+        return COLOR_CYAN
+    lower = label.lower()
+    if "right" in lower:
+        return COLOR_RED
+    if "center" in lower or "balanced" in lower:
+        return COLOR_AMBER
+    return COLOR_CYAN
+
+
+def _color_for_tone(label: Optional[str]):
+    if not label:
+        return COLOR_CYAN
+    lower = label.lower()
+    if "positive" in lower:
+        return COLOR_GREEN
+    if "negative" in lower:
+        return COLOR_RED
+    return COLOR_AMBER
+
+
+def _color_for_facts(score: Optional[int]):
+    if score is None:
+        return COLOR_AMBER
+    if score >= 70:
+        return COLOR_GREEN
+    if score >= 40:
+        return COLOR_AMBER
+    return COLOR_RED
+
+
+def _draw_radial_glow(img: Image.Image, center, radius, color, alpha):
+    """Approximate a radial gradient with a single soft circle pasted via alpha."""
+    glow = Image.new("RGBA", (radius * 2, radius * 2), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    steps = 60
+    for i in range(steps, 0, -1):
+        a = int(alpha * (i / steps) ** 2)
+        r = int(radius * (i / steps))
+        gd.ellipse(
+            [(radius - r, radius - r), (radius + r, radius + r)],
+            fill=color + (a,),
+        )
+    img.alpha_composite(glow, (center[0] - radius, center[1] - radius))
+
+
+def render_og_image(analysis: dict) -> bytes:
+    """Render a 1200x630 PNG suitable for use as an Open Graph image."""
+    W, H = 1200, 630
+    img = Image.new("RGBA", (W, H), COLOR_BG + (255,))
+
+    # Background glows — cyan top-left, purple bottom-right.
+    _draw_radial_glow(img, center=(220, 180), radius=420, color=COLOR_CYAN, alpha=70)
+    _draw_radial_glow(img, center=(1000, 540), radius=420, color=COLOR_PURPLE, alpha=55)
+
+    draw = ImageDraw.Draw(img)
+
+    font_brand = ImageFont.truetype(FONT_BOLD, 32)
+    font_brand_mark = ImageFont.truetype(FONT_BOLD, 30)
+    font_source = ImageFont.truetype(FONT_BOLD, 18)
+    font_headline = ImageFont.truetype(FONT_BOLD, 56)
+    font_score_label = ImageFont.truetype(FONT_BOLD, 14)
+    font_score_value = ImageFont.truetype(FONT_BOLD, 34)
+
+    # Brand block — top left.
+    pad_x = 80
+    pad_y = 72
+    mark_d = 56
+    # gradient circle: paste a cyan→purple gradient onto a circular mask.
+    mark = Image.new("RGBA", (mark_d, mark_d), (0, 0, 0, 0))
+    md = ImageDraw.Draw(mark)
+    md.ellipse([(0, 0), (mark_d, mark_d)], fill=COLOR_CYAN + (255,))
+    # Overlay purple from one diagonal for a faux gradient.
+    for x in range(mark_d):
+        for y in range(mark_d):
+            if (x + y) > mark_d * 0.6:
+                # blend toward purple
+                t = min(1.0, ((x + y) - mark_d * 0.6) / (mark_d * 0.8))
+                r = int(COLOR_CYAN[0] * (1 - t) + COLOR_PURPLE[0] * t)
+                g = int(COLOR_CYAN[1] * (1 - t) + COLOR_PURPLE[1] * t)
+                b = int(COLOR_CYAN[2] * (1 - t) + COLOR_PURPLE[2] * t)
+                # only inside circle
+                cx, cy = mark_d / 2, mark_d / 2
+                if (x - cx) ** 2 + (y - cy) ** 2 <= (mark_d / 2) ** 2:
+                    mark.putpixel((x, y), (r, g, b, 255))
+    img.alpha_composite(mark, (pad_x, pad_y - 12))
+    # Big "V" centred on the mark.
+    v_w = draw.textlength("V", font=font_brand_mark)
+    draw.text(
+        (pad_x + (mark_d - v_w) / 2, pad_y - 10),
+        "V",
+        font=font_brand_mark,
+        fill=(10, 10, 10, 255),
+    )
+    # Wordmark.
+    draw.text((pad_x + mark_d + 16, pad_y), "veris", font=font_brand, fill=COLOR_TEXT + (255,))
+
+    # Source line.
+    source_name = (analysis.get("source_name") or "").upper()
+    fact_score = analysis.get("fact_score")
+    source_text = source_name
+    if fact_score is not None:
+        source_text = f"{source_name}  ·  {fact_score}/100 FACTS" if source_name else f"{fact_score}/100 FACTS"
+    if source_text:
+        draw.text((pad_x, pad_y + mark_d + 32), source_text, font=font_source, fill=COLOR_MUTED + (255,))
+
+    # Headline — wrap to up to 3 lines.
+    headline = analysis.get("headline") or analysis.get("url") or "Veris analysis"
+    headline_y = pad_y + mark_d + 70
+    headline_lines = _wrap_text(draw, headline, font_headline, max_width=W - pad_x * 2, max_lines=3)
+    line_h = 64
+    for i, line in enumerate(headline_lines):
+        draw.text((pad_x, headline_y + i * line_h), line, font=font_headline, fill=COLOR_TEXT + (255,))
+
+    # Score row — bottom.
+    card_h = 110
+    card_y = H - pad_y - card_h
+    card_w = (W - pad_x * 2 - 36) // 3  # 18px gap × 2
+    cards = [
+        ("LEAN", analysis.get("lean_label") or "—", _color_for_lean(analysis.get("lean_label"))),
+        (
+            "TONE",
+            ((analysis.get("result_json") or {}).get("sentiment") or {}).get("label") or "—",
+            _color_for_tone(((analysis.get("result_json") or {}).get("sentiment") or {}).get("label")),
+        ),
+        (
+            "FACTS",
+            f"{fact_score}/100" if fact_score is not None else "—",
+            _color_for_facts(fact_score),
+        ),
+    ]
+    for i, (label, value, color) in enumerate(cards):
+        x0 = pad_x + i * (card_w + 18)
+        x1 = x0 + card_w
+        y0 = card_y
+        y1 = card_y + card_h
+        # Card background (semi-transparent white) and tinted border.
+        draw.rounded_rectangle(
+            [(x0, y0), (x1, y1)],
+            radius=16,
+            fill=(255, 255, 255, 12),
+            outline=color + (115,),
+            width=2,
+        )
+        draw.text((x0 + 24, y0 + 22), label, font=font_score_label, fill=COLOR_MUTED + (255,))
+        # Truncate value if too wide for card.
+        max_value_w = card_w - 48
+        value_disp = value
+        while draw.textlength(value_disp, font=font_score_value) > max_value_w and len(value_disp) > 1:
+            value_disp = value_disp[:-1]
+        if value_disp != value:
+            value_disp = value_disp[:-1] + "…"
+        draw.text((x0 + 24, y0 + 50), value_disp, font=font_score_value, fill=color + (255,))
+
+    out = io.BytesIO()
+    img.convert("RGB").save(out, format="PNG", optimize=True)
+    return out.getvalue()
+
+
 def render_share_html(analysis: dict) -> str:
     """Return a complete HTML document for a public share page.
 
