@@ -160,3 +160,21 @@ def test_render_og_image_truncates_long_headline():
     # Should not raise even on absurdly long headline.
     png = render_og_image(a)
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_render_og_image_handles_missing_optional_fields():
+    """Sanity check: empty / None fields don't crash the renderer."""
+    from share import render_og_image
+    minimal = {
+        "id": "minimal-id",
+        "url": None,
+        "source_name": None,
+        "headline": None,
+        "lean_label": None,
+        "lean_numeric": None,
+        "fact_score": None,
+        "shareable": True,
+        "result_json": None,
+    }
+    png = render_og_image(minimal)
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"

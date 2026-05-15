@@ -14,6 +14,8 @@ import os
 from typing import Optional
 from urllib.parse import quote_plus
 
+from PIL import Image, ImageDraw, ImageFont
+
 logger = logging.getLogger(__name__)
 
 # Public site URL — share links and OG image URLs use this base.
@@ -134,8 +136,6 @@ def _broaden_view_section(items: list) -> str:
   <div class="broaden-grid">{''.join(cards)}</div>
 </section>"""
 
-
-from PIL import Image, ImageDraw, ImageFont
 
 # RGB palette mirrored from frontend/style.css :root tokens.
 COLOR_BG = (8, 11, 15)            # #080b0f
