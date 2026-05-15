@@ -8,11 +8,11 @@ template constants:
 3. get_or_create_og_png(...)           — Storage caching wrapper around (2)
 """
 
-import html as html_escape
 import io
 import logging
 import os
 from typing import Optional
+from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +76,65 @@ def _tone_color(label: Optional[str]) -> str:
     return "var(--amber)"
 
 
+def _accordion(title: str, body_html: str) -> str:
+    return f"""<details class="acc">
+  <summary><span class="acc-title">{_esc(title)}</span><span class="acc-icon">›</span></summary>
+  <div class="acc-body">{body_html}</div>
+</details>"""
+
+
+def _framing_choices_section(political_lean: dict) -> str:
+    """Render the 'framing choices' accordion (quotes that reveal bias)."""
+    items = (political_lean or {}).get("framing_choices") or []
+    if not items:
+        return ""
+    body = "".join(
+        f'<li><b>"{_esc(c.get("quote"))}"</b><br><span class="verdict">{_esc(c.get("analysis") or "")}</span></li>'
+        for c in items
+    )
+    return _accordion(f"Framing choices ({len(items)})", f"<ul>{body}</ul>")
+
+
+def _fact_claims_section(fact_check: dict) -> str:
+    claims = (fact_check or {}).get("claims") or []
+    if not claims:
+        return ""
+    items = "".join(
+        f'<li>{_esc(c.get("claim"))} <span class="verdict">— {_esc(c.get("verdict") or "")}</span><br>'
+        f'<span class="verdict">{_esc(c.get("explanation") or "")}</span></li>'
+        for c in claims
+    )
+    return _accordion(f"Fact-check breakdown ({len(claims)} claims)", f"<ul>{items}</ul>")
+
+
+def _broaden_view_section(items: list) -> str:
+    """`items` follows the analyzer's broaden_your_view shape: outlet, perspective, angle, why."""
+    if not items:
+        return ""
+    cards = []
+    for it in items:
+        outlet = _esc(it.get("outlet") or "")
+        perspective = _esc(it.get("perspective") or "")
+        angle = _esc(it.get("angle") or "")
+        why = _esc(it.get("why") or "")
+        query = quote_plus(f"{it.get('outlet') or ''} {it.get('angle') or ''}".strip())
+        href = f"https://www.google.com/search?q={query}"
+        cards.append(
+            f'<div class="broaden-card">'
+            f'<div class="broaden-tag">{perspective}</div>'
+            f'<div class="broaden-outlet">{outlet}</div>'
+            f'<div class="broaden-angle">{angle}</div>'
+            f'<div class="broaden-why">{why}</div>'
+            f'<a class="broaden-link" href="{href}" target="_blank" rel="noopener noreferrer">Search Google ↗</a>'
+            f'</div>'
+        )
+    return f"""<section class="broaden">
+  <h2 class="broaden-heading">Broaden your view</h2>
+  <div class="broaden-sub">Other perspectives on this story</div>
+  <div class="broaden-grid">{''.join(cards)}</div>
+</section>"""
+
+
 def render_share_html(analysis: dict) -> str:
     """Return a complete HTML document for a public share page.
 
@@ -104,6 +163,10 @@ def render_share_html(analysis: dict) -> str:
     tone_color = _tone_color((result.get("sentiment") or {}).get("label"))
     facts_color = _fact_color(fact_score)
     fact_score_disp = _esc(fact_score if fact_score is not None else "—")
+
+    framing_html = _framing_choices_section(result.get("political_lean") or {})
+    fact_html = _fact_claims_section(result.get("fact_check") or {})
+    broaden_html = _broaden_view_section(result.get("broaden_your_view") or [])
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -190,6 +253,39 @@ def render_share_html(analysis: dict) -> str:
   .footer-cta a {{ display: inline-block; padding: 12px 24px; border-radius: 999px;
     background: linear-gradient(135deg, var(--cyan), var(--purple));
     color: #0a0a0a; font-weight: 600; text-decoration: none; font-size: 14px; }}
+  .acc {{ background: var(--card); border: 1px solid var(--card-bd);
+    border-radius: 12px; margin-bottom: 10px; overflow: hidden; }}
+  .acc summary {{ list-style: none; padding: 16px 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; }}
+  .acc summary::-webkit-details-marker {{ display: none; }}
+  .acc-title {{ font-size: 14px; font-weight: 600; }}
+  .acc-icon {{ color: var(--muted); transition: transform .2s; }}
+  details[open] .acc-icon {{ transform: rotate(90deg); }}
+  .acc-body {{ padding: 0 22px 18px; }}
+  .acc-body ul {{ margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.7;
+    color: var(--muted-hi); }}
+  .acc-body li {{ margin-bottom: 6px; }}
+  .verdict {{ color: var(--muted); font-size: 13px; }}
+  .broaden {{ margin-top: 36px; }}
+  .broaden-heading {{ font-size: 18px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.3px; }}
+  .broaden-sub {{ font-size: 13px; color: var(--muted); margin-bottom: 18px; }}
+  .broaden-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }}
+  .broaden-card {{ padding: 14px 16px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--card-bd);
+    display: flex; flex-direction: column; gap: 6px; }}
+  .broaden-tag {{ font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--cyan); font-weight: 700; }}
+  .broaden-outlet {{ font-size: 14px; font-weight: 600; color: var(--text); }}
+  .broaden-angle {{ font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8); line-height: 1.4; }}
+  .broaden-why {{ font-size: 12px; color: var(--muted); line-height: 1.5; }}
+  .broaden-link {{ font-size: 11px; color: var(--cyan); text-decoration: none; margin-top: auto; }}
+  @media (max-width: 640px) {{
+    h1 {{ font-size: 26px; }}
+    .scores {{ grid-template-columns: 1fr; }}
+    .broaden-grid {{ grid-template-columns: 1fr; }}
+    .wrap {{ padding: 32px 20px 48px; }}
+  }}
 </style>
 </head>
 <body>
@@ -222,6 +318,9 @@ def render_share_html(analysis: dict) -> str:
     <div class="label">Summary</div>
     <p>{summary}</p>
   </section>
+  {framing_html}
+  {fact_html}
+  {broaden_html}
   <div class="footer-cta">
     <h3>Read news with clearer eyes.</h3>
     <p>Veris analyzes any article for political lean, tone, and factual accuracy.</p>

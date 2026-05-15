@@ -79,3 +79,59 @@ def test_render_share_html_escapes_unsafe_headline():
     html = render_share_html(evil)
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
+
+
+def test_render_share_html_renders_framing_choices_accordion():
+    from share import render_share_html
+    a = dict(SAMPLE_ANALYSIS)
+    a["result_json"] = dict(SAMPLE_ANALYSIS["result_json"])
+    a["result_json"]["political_lean"] = dict(a["result_json"]["political_lean"])
+    a["result_json"]["political_lean"]["framing_choices"] = [
+        {"quote": "outrageous decision", "analysis": "Loaded language.", "lean": "left"},
+    ]
+    html = render_share_html(a)
+    assert "Framing" in html
+    assert "outrageous decision" in html
+
+
+def test_render_share_html_renders_fact_claims_accordion():
+    from share import render_share_html
+    a = dict(SAMPLE_ANALYSIS)
+    a["result_json"] = dict(SAMPLE_ANALYSIS["result_json"])
+    a["result_json"]["fact_check"] = {
+        "score": 80,
+        "claims": [{"claim": "X says Y", "verdict": "supported", "explanation": "Confirmed."}],
+    }
+    html = render_share_html(a)
+    assert "Fact-check" in html
+    assert "X says Y" in html
+
+
+def test_render_share_html_renders_broaden_your_view():
+    from share import render_share_html
+    a = dict(SAMPLE_ANALYSIS)
+    a["result_json"] = dict(SAMPLE_ANALYSIS["result_json"])
+    a["result_json"]["broaden_your_view"] = [
+        {"outlet": "NYT", "perspective": "liberal", "angle": "Voter access concerns", "why": "Detail on impact."},
+        {"outlet": "WSJ", "perspective": "conservative", "angle": "Conservative legal case", "why": "Procedural detail."},
+    ]
+    html = render_share_html(a)
+    assert "Broaden your view" in html
+    assert "NYT" in html
+    assert "WSJ" in html
+    assert "Voter access concerns" in html
+    assert "google.com/search" in html
+
+
+def test_render_share_html_omits_empty_accordions():
+    from share import render_share_html
+    a = dict(SAMPLE_ANALYSIS)
+    a["result_json"] = dict(SAMPLE_ANALYSIS["result_json"])
+    a["result_json"]["political_lean"] = dict(a["result_json"]["political_lean"])
+    a["result_json"]["political_lean"]["framing_choices"] = []
+    a["result_json"]["fact_check"] = {"score": 0, "claims": []}
+    a["result_json"]["broaden_your_view"] = []
+    html = render_share_html(a)
+    assert "Framing" not in html
+    assert "Fact-check" not in html
+    assert "Broaden your view" not in html
