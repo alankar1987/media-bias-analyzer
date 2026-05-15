@@ -1,5 +1,6 @@
 import io
 import os
+from unittest.mock import MagicMock, patch
 from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
@@ -178,3 +179,55 @@ def test_render_og_image_handles_missing_optional_fields():
     }
     png = render_og_image(minimal)
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_get_or_create_og_png_returns_existing_url(mocker):
+    """When the file already exists in storage, do NOT call Pillow."""
+    mock_storage = MagicMock()
+    mock_storage.list.return_value = [{"name": "11111111-2222-3333-4444-555555555555.png"}]
+    mock_storage.get_public_url.return_value = "https://supabase/og-cards/abc.png"
+    mock_sb = MagicMock()
+    mock_sb.storage.from_.return_value = mock_storage
+
+    render_spy = mocker.patch("share.render_og_image")
+
+    from share import get_or_create_og_png
+    url = get_or_create_og_png(SAMPLE_ANALYSIS, supabase=mock_sb)
+
+    assert url == "https://supabase/og-cards/abc.png"
+    render_spy.assert_not_called()
+    mock_storage.upload.assert_not_called()
+
+
+def test_get_or_create_og_png_creates_when_missing(mocker):
+    """When the file is absent, render via Pillow and upload."""
+    mock_storage = MagicMock()
+    mock_storage.list.return_value = []  # no files
+    mock_storage.get_public_url.return_value = "https://supabase/og-cards/new.png"
+    mock_sb = MagicMock()
+    mock_sb.storage.from_.return_value = mock_storage
+
+    mocker.patch("share.render_og_image", return_value=b"\x89PNG\r\n\x1a\nFAKE")
+
+    from share import get_or_create_og_png
+    url = get_or_create_og_png(SAMPLE_ANALYSIS, supabase=mock_sb)
+
+    assert url == "https://supabase/og-cards/new.png"
+    mock_storage.upload.assert_called_once()
+    call = mock_storage.upload.call_args
+    assert call.kwargs.get("path") or call.args[0] == f"{SAMPLE_ANALYSIS['id']}.png"
+
+
+def test_get_or_create_og_png_upload_failure_returns_none(mocker):
+    """Storage upload errors shouldn't crash the route — return None and let the caller fall back."""
+    mock_storage = MagicMock()
+    mock_storage.list.return_value = []
+    mock_storage.upload.side_effect = Exception("storage down")
+    mock_sb = MagicMock()
+    mock_sb.storage.from_.return_value = mock_storage
+    mocker.patch("share.render_og_image", return_value=b"\x89PNG\r\n\x1a\nFAKE")
+
+    from share import get_or_create_og_png
+    url = get_or_create_og_png(SAMPLE_ANALYSIS, supabase=mock_sb)
+
+    assert url is None

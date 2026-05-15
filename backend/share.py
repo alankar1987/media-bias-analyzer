@@ -337,6 +337,51 @@ def render_og_image(analysis: dict) -> bytes:
     return out.getvalue()
 
 
+OG_BUCKET = "og-cards"
+
+
+def get_or_create_og_png(analysis: dict, supabase) -> Optional[str]:
+    """Return the public URL of the OG PNG for this analysis, generating it if needed.
+
+    Returns None on storage failure so the caller can serve a fallback inline.
+    """
+    analysis_id = analysis["id"]
+    path = f"{analysis_id}.png"
+    bucket = supabase.storage.from_(OG_BUCKET)
+
+    # Cache check: list with the exact filename. Storage `list` accepts a search prefix;
+    # for an exact match we look for the file name in the bucket root.
+    try:
+        existing = bucket.list(path="", search=path)
+        if existing and any(item.get("name") == path for item in existing):
+            return bucket.get_public_url(path)
+    except Exception as exc:
+        logger.warning("og-cards list failed for %s: %s", path, exc)
+
+    # Miss → render + upload.
+    try:
+        png = render_og_image(analysis)
+    except Exception as exc:
+        logger.error("render_og_image failed for %s: %s", analysis_id, exc)
+        return None
+
+    try:
+        bucket.upload(
+            path=path,
+            file=png,
+            file_options={"content-type": "image/png", "cache-control": "public, max-age=31536000, immutable"},
+        )
+    except Exception as exc:
+        logger.error("og-cards upload failed for %s: %s", path, exc)
+        return None
+
+    try:
+        return bucket.get_public_url(path)
+    except Exception as exc:
+        logger.error("og-cards public_url failed for %s: %s", path, exc)
+        return None
+
+
 def render_share_html(analysis: dict) -> str:
     """Return a complete HTML document for a public share page.
 
