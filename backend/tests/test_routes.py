@@ -134,3 +134,44 @@ def test_get_og_image_inline_fallback_on_storage_failure(client):
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "image/png"
     assert resp.content.startswith(b"\x89PNG")
+
+
+def test_analyze_returns_analysis_id_when_signed_in(client):
+    fake_result = {
+        "title": "X",
+        "political_lean": {"label": "Center", "numeric": 0},
+        "sentiment": {"label": "Neutral", "numeric": 0},
+        "fact_check": {"score": 50, "claims": []},
+    }
+    with patch("main.verify_jwt", return_value={"id": "u1", "email": "a@b.com"}), \
+         patch("main.get_quota", return_value=MagicMock(used=0, limit=10, tier="free", allowed=True)), \
+         patch("main.analyze_content", return_value=fake_result), \
+         patch("main.find_cached_analysis", return_value=None), \
+         patch("main.save_analysis", return_value="row-id-xyz"):
+        resp = client.post(
+            "/analyze",
+            json={"text": "x" * 100},
+            headers={"Authorization": "Bearer t"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["analysis_id"] == "row-id-xyz"
+
+
+def test_analyze_anonymous_response_omits_analysis_id(client):
+    fake_result = {
+        "title": "X",
+        "political_lean": {"label": "Center", "numeric": 0},
+        "sentiment": {"label": "Neutral", "numeric": 0},
+        "fact_check": {"score": 50, "claims": []},
+    }
+    with patch("main.analyze_content", return_value=fake_result), \
+         patch("main.find_cached_analysis", return_value=None):
+        resp = client.post(
+            "/analyze",
+            json={"text": "x" * 100},
+            headers={"origin": "chrome-extension://abc"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body.get("analysis_id") is None

@@ -104,6 +104,8 @@ class AnalyzeResponse(BaseModel):
     error: Optional[str] = None
     source_url: Optional[str] = None
     text_preview: Optional[str] = None
+    analysis_id: Optional[str] = None
+    cached: Optional[bool] = None
 
 
 class CompareRequest(BaseModel):
@@ -413,6 +415,7 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
             raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
 
     # ── 4. Save if logged in ────────────────────────────────────────────────
+    saved_id: Optional[str] = None
     if user:
         lean = result.get("political_lean", {})
         fc = result.get("fact_check", {})
@@ -427,7 +430,7 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
             except Exception:
                 pass
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: save_analysis(
+        saved_id = await loop.run_in_executor(None, lambda: save_analysis(
             user_id=user["id"],
             url=source_url,
             source_name=derived_source,
@@ -443,7 +446,14 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
     preview_len = 300
     preview = article_text[:preview_len] + "…" if len(article_text) > preview_len else article_text
 
-    response = JSONResponse(content={"success": True, "data": result, "source_url": source_url, "text_preview": preview, "cached": cached})
+    response = JSONResponse(content={
+        "success": True,
+        "data": result,
+        "source_url": source_url,
+        "text_preview": preview,
+        "cached": cached,
+        "analysis_id": saved_id,
+    })
 
     # Set anon cookie for first-time anonymous users
     if user is None:
