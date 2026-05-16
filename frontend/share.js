@@ -1,0 +1,85 @@
+// frontend/share.js — share-link helpers shared by results page and history.
+// Attaches to window.VerisShare. No build step; loaded via <script src="share.js">.
+
+(function () {
+  const SITE = "https://veris.news";
+
+  function buildShareUrl(analysisId) {
+    return `${SITE}/a/${analysisId}`;
+  }
+
+  function buildShareText(headline, leanLabel, factScore) {
+    const lean = leanLabel || "—";
+    const facts = factScore != null ? `${factScore}/100` : "—";
+    return `"${headline || "Article"}" — analysed on Veris. Lean: ${lean}, Facts: ${facts}.`;
+  }
+
+  function openShareIntent(platform, headline, leanLabel, factScore, shareUrl) {
+    const text = buildShareText(headline, leanLabel, factScore);
+    const encodedText = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(shareUrl);
+    let target = null;
+    switch (platform) {
+      case "x":
+        target = `https://x.com/intent/post?text=${encodedText}&url=${encodedUrl}`;
+        break;
+      case "linkedin":
+        target = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+        break;
+      case "whatsapp":
+        target = `https://wa.me/?text=${encodedText}%20${encodedUrl}`;
+        break;
+      default:
+        return;
+    }
+    window.open(target, "_blank", "noopener,noreferrer");
+  }
+
+  async function copyShareLink(shareUrl) {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      return true;
+    } catch (_) {
+      // Fallback: temp textarea.
+      const ta = document.createElement("textarea");
+      ta.value = shareUrl;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (_) {}
+      ta.remove();
+      return ok;
+    }
+  }
+
+  function renderShareRow(container, analysisId, headline, leanLabel, factScore, onCopy) {
+    const shareUrl = buildShareUrl(analysisId);
+    container.innerHTML = `
+      <span class="share-row-label">Share this analysis:</span>
+      <button class="share-btn" data-platform="x"        title="Share on X">𝕏</button>
+      <button class="share-btn" data-platform="linkedin" title="Share on LinkedIn">in</button>
+      <button class="share-btn" data-platform="whatsapp" title="Share on WhatsApp">✆</button>
+      <button class="share-btn copy" data-platform="copy">⎘ Copy link</button>
+    `;
+    container.querySelectorAll(".share-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const platform = btn.dataset.platform;
+        if (platform === "copy") {
+          const ok = await copyShareLink(shareUrl);
+          if (typeof onCopy === "function") onCopy(ok);
+        } else {
+          openShareIntent(platform, headline, leanLabel, factScore, shareUrl);
+        }
+      });
+    });
+  }
+
+  window.VerisShare = {
+    buildShareUrl,
+    buildShareText,
+    openShareIntent,
+    copyShareLink,
+    renderShareRow,
+  };
+})();
