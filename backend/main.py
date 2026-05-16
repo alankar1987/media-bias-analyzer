@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, model_validator
 from dotenv import load_dotenv
 
@@ -14,7 +14,8 @@ import hashlib
 
 from analyzer import extract_text_from_url, analyze_content
 from auth import verify_jwt, get_quota, QuotaInfo
-from db import save_analysis, get_history, get_analysis, delete_user as db_delete_user, find_cached_analysis
+from db import save_analysis, get_history, get_analysis, delete_user as db_delete_user, find_cached_analysis, get_public_analysis
+from share import render_share_html, get_or_create_og_png, render_og_image
 import stripe_client
 from rate_limit import get_limiter, ANON_COOKIE_NAME
 
@@ -25,6 +26,26 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+SHARE_404_HTML = """<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Analysis not found — Veris</title>
+<style>
+  body{margin:0;background:#080b0f;color:#f0f4f8;font-family:'DM Sans',sans-serif;
+       display:grid;place-items:center;min-height:100vh;padding:24px;text-align:center}
+  h1{font-size:28px;margin:0 0 12px}
+  p{color:rgba(255,255,255,0.6);margin:0 0 24px;font-size:15px}
+  a{color:#22d3ee;text-decoration:none;font-weight:600}
+</style>
+</head><body>
+<div>
+  <h1>This analysis isn't available.</h1>
+  <p>It may have been deleted, or the link is wrong.</p>
+  <a href="https://veris.news/">← Back to Veris</a>
+</div>
+</body></html>"""
 
 MIN_TEXT_LENGTH = 50
 
@@ -262,6 +283,15 @@ async def stripe_webhook(request: Request):
         logger.error("Webhook error: %s", exc)
         raise HTTPException(status_code=400, detail="Webhook processing failed")
     return {"received": True}
+
+
+@app.get("/a/{analysis_id}", tags=["share"])
+async def share_page(analysis_id: str):
+    """Public, no-auth share page for a single analysis."""
+    row = get_public_analysis(analysis_id=analysis_id)
+    if not row:
+        return HTMLResponse(content=SHARE_404_HTML, status_code=404)
+    return HTMLResponse(content=render_share_html(row), status_code=200)
 
 
 @app.post("/analyze", response_model=AnalyzeResponse, tags=["analysis"])

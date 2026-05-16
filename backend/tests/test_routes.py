@@ -51,3 +51,50 @@ def test_analyze_quota_exceeded_returns_402(client):
 def test_delete_account_no_auth(client):
     resp = client.delete("/auth/account")
     assert resp.status_code == 401
+
+
+def test_get_share_page_returns_html(client):
+    sample = {
+        "id": "abc-123",
+        "url": "https://example.com",
+        "source_name": "example.com",
+        "headline": "Test headline",
+        "lean_label": "Center",
+        "lean_numeric": 0,
+        "fact_score": 70,
+        "shareable": True,
+        "result_json": {
+            "title": "Test headline",
+            "political_lean": {"label": "Center"},
+            "sentiment": {"label": "Neutral"},
+            "fact_check": {"score": 70, "claims": []},
+            "summary": "A neutral piece.",
+            "biased_phrases": [],
+            "perspectives": [],
+        },
+    }
+    with patch("main.get_public_analysis", return_value=sample):
+        resp = client.get("/a/abc-123")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/html")
+    assert "Test headline" in resp.text
+    assert 'property="og:image"' in resp.text
+
+
+def test_get_share_page_404_when_missing(client):
+    with patch("main.get_public_analysis", return_value=None):
+        resp = client.get("/a/does-not-exist")
+    assert resp.status_code == 404
+    assert resp.headers["content-type"].startswith("text/html")
+
+
+def test_get_share_page_sends_noindex(client):
+    sample = {
+        "id": "abc", "url": None, "source_name": None,
+        "headline": "h", "lean_label": "Center", "lean_numeric": 0,
+        "fact_score": 50, "shareable": True,
+        "result_json": {"sentiment": {"label": "Neutral"}, "fact_check": {"score": 50}},
+    }
+    with patch("main.get_public_analysis", return_value=sample):
+        resp = client.get("/a/abc")
+    assert 'content="noindex, nofollow"' in resp.text
