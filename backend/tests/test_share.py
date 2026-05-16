@@ -215,7 +215,9 @@ def test_get_or_create_og_png_creates_when_missing(mocker):
     assert url == "https://supabase/og-cards/new.png"
     mock_storage.upload.assert_called_once()
     call = mock_storage.upload.call_args
-    assert call.kwargs.get("path") or call.args[0] == f"{SAMPLE_ANALYSIS['id']}.png"
+    assert call.kwargs["path"] == f"{SAMPLE_ANALYSIS['id']}.png"
+    assert call.kwargs["file_options"]["content-type"] == "image/png"
+    assert "immutable" in call.kwargs["file_options"]["cache-control"]
 
 
 def test_get_or_create_og_png_upload_failure_returns_none(mocker):
