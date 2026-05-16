@@ -98,3 +98,39 @@ def test_get_share_page_sends_noindex(client):
     with patch("main.get_public_analysis", return_value=sample):
         resp = client.get("/a/abc")
     assert 'content="noindex, nofollow"' in resp.text
+
+
+def test_get_og_image_redirects_to_storage(client):
+    sample = {
+        "id": "abc-123", "headline": "H", "shareable": True,
+        "url": None, "source_name": None, "lean_label": "Center", "lean_numeric": 0,
+        "fact_score": 70,
+        "result_json": {"sentiment": {"label": "Neutral"}, "fact_check": {"score": 70}},
+    }
+    with patch("main.get_public_analysis", return_value=sample), \
+         patch("main.get_or_create_og_png", return_value="https://supabase/og-cards/abc-123.png"):
+        resp = client.get("/og/abc-123.png", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers["location"] == "https://supabase/og-cards/abc-123.png"
+
+
+def test_get_og_image_404_when_missing(client):
+    with patch("main.get_public_analysis", return_value=None):
+        resp = client.get("/og/does-not-exist.png", follow_redirects=False)
+    assert resp.status_code == 404
+
+
+def test_get_og_image_inline_fallback_on_storage_failure(client):
+    sample = {
+        "id": "abc", "headline": "H", "shareable": True,
+        "url": None, "source_name": None, "lean_label": "Center", "lean_numeric": 0,
+        "fact_score": 70,
+        "result_json": {"sentiment": {"label": "Neutral"}, "fact_check": {"score": 70}},
+    }
+    with patch("main.get_public_analysis", return_value=sample), \
+         patch("main.get_or_create_og_png", return_value=None), \
+         patch("main.render_og_image", return_value=b"\x89PNG\r\n\x1a\nFAKE"):
+        resp = client.get("/og/abc.png", follow_redirects=False)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/png"
+    assert resp.content.startswith(b"\x89PNG")

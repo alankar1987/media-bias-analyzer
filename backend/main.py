@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel, model_validator
 from dotenv import load_dotenv
 
@@ -15,6 +15,7 @@ import hashlib
 from analyzer import extract_text_from_url, analyze_content
 from auth import verify_jwt, get_quota, QuotaInfo
 from db import save_analysis, get_history, get_analysis, delete_user as db_delete_user, find_cached_analysis, get_public_analysis
+from db import _supabase as supabase_client  # used for storage access
 from share import render_share_html, get_or_create_og_png, render_og_image
 import stripe_client
 from rate_limit import get_limiter, ANON_COOKIE_NAME
@@ -292,6 +293,30 @@ async def share_page(analysis_id: str):
     if not row:
         return HTMLResponse(content=SHARE_404_HTML, status_code=404)
     return HTMLResponse(content=render_share_html(row), status_code=200)
+
+
+@app.get("/og/{analysis_id}.png", tags=["share"])
+async def og_image(analysis_id: str):
+    """Open Graph image for a share page. 302 to Supabase Storage on hit;
+    inline PNG fallback if storage upload fails."""
+    row = get_public_analysis(analysis_id=analysis_id)
+    if not row:
+        # 404 — simpler than serving a fallback PNG to crawlers.
+        return Response(status_code=404)
+    url = get_or_create_og_png(row, supabase=supabase_client)
+    if url:
+        return RedirectResponse(
+            url=url,
+            status_code=302,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    # Storage failed — render inline.
+    try:
+        png = render_og_image(row)
+        return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+    except Exception as exc:
+        logger.error("og inline render failed for %s: %s", analysis_id, exc)
+        return Response(status_code=500)
 
 
 @app.post("/analyze", response_model=AnalyzeResponse, tags=["analysis"])
