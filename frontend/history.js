@@ -146,8 +146,12 @@ function renderCards(items) {
     list.appendChild(groupDiv);
   });
 
-  list.querySelectorAll('.share-history-btn').forEach((btn) => {
-    btn.addEventListener('click', (ev) => {
+  // Delegated share-button handler: bind once on `list`, survive re-renders.
+  if (!list._verisShareDelegated) {
+    list._verisShareDelegated = true;
+    list.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.share-history-btn');
+      if (!btn || !list.contains(btn)) return;
       ev.stopPropagation();
       document.querySelectorAll('.share-popover').forEach((p) => p.remove());
       const pop = document.createElement('div');
@@ -175,7 +179,7 @@ function renderCards(items) {
         });
       }, 0);
     });
-  });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
