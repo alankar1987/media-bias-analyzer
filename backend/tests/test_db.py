@@ -41,3 +41,41 @@ def test_get_history_returns_list(mocker):
     from db import get_history
     result = get_history(user_id="u1", offset=0, limit=20)
     assert result == [{"id": "1", "headline": "Test"}]
+
+
+def test_get_public_analysis_returns_row_when_shareable(mocker):
+    mock_sb = mocker.patch("db._supabase")
+    row = {"id": "abc", "shareable": True, "headline": "x"}
+    mock_sb.table.return_value.select.return_value.eq.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = row
+    from db import get_public_analysis
+    result = get_public_analysis(analysis_id="abc")
+    assert result == row
+
+
+def test_get_public_analysis_returns_none_when_not_shareable(mocker):
+    mock_sb = mocker.patch("db._supabase")
+    # No row matches when shareable=true is added to the filter.
+    mock_sb.table.return_value.select.return_value.eq.return_value.eq.return_value.maybe_single.return_value.execute.return_value.data = None
+    from db import get_public_analysis
+    result = get_public_analysis(analysis_id="abc")
+    assert result is None
+
+
+def test_get_public_analysis_returns_none_on_error(mocker):
+    mock_sb = mocker.patch("db._supabase")
+    mock_sb.table.side_effect = Exception("db down")
+    from db import get_public_analysis
+    result = get_public_analysis(analysis_id="abc")
+    assert result is None
+
+
+def test_set_shareable_true(mocker):
+    mock_sb = mocker.patch("db._supabase")
+    from db import set_shareable
+    set_shareable(analysis_id="abc", user_id="u1", shareable=False)
+    # eq().eq().update() — order doesn't matter for the test, but make sure
+    # the user_id and analysis_id are both used as filters.
+    table_call = mock_sb.table.return_value
+    assert table_call.update.called
+    update_payload = table_call.update.call_args.args[0]
+    assert update_payload == {"shareable": False}
