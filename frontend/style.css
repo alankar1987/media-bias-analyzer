@@ -1016,8 +1016,9 @@ nav {
   .results-header { flex-direction: column; gap: 10px; }
   .results-title { font-size: 17px; white-space: normal; }
 
-  /* History rows: title wraps, badges drop to a second row right-aligned,
-     share button stays on the first row at the right edge. */
+  /* History rows: title wraps, share button sits on row 1 (right side),
+     badges drop to a second row right-aligned.
+     Explicit flex `order` to keep this rule independent of DOM order. */
   .history-item {
     flex-wrap: wrap;
     column-gap: 12px;
@@ -1025,8 +1026,8 @@ nav {
     align-items: flex-start;
     padding: 12px 14px;
   }
-  .history-icon { width: 32px; height: 32px; flex-shrink: 0; }
-  .history-body { flex: 1 1 0; min-width: 0; }
+  .history-icon { width: 32px; height: 32px; flex-shrink: 0; order: 0; }
+  .history-body { flex: 1 1 0; min-width: 0; order: 1; }
   .history-title {
     white-space: normal;
     overflow: visible;
@@ -1035,12 +1036,20 @@ nav {
     font-size: 14px;
   }
   .history-meta { font-size: 11px; flex-wrap: wrap; }
+  .history-item .share-history-btn {
+    flex-shrink: 0;
+    margin-left: 0;
+    order: 2;
+  }
   .history-badges {
     flex-basis: 100%;
     justify-content: flex-end;
     gap: 6px;
+    order: 3;
   }
-  .history-item .share-history-btn { flex-shrink: 0; margin-left: 0; }
+  /* Popover anchored to share-btn (now at row 1 right edge). Override `right: 0`
+     so the popover prefers to extend leftward AND ensure it fits in viewport. */
+  .share-popover { right: 0; left: auto; max-width: calc(100vw - 32px); }
 
   /* Mobile nav: hamburger replaces inline nav-links until toggled. */
   .nav-hamburger { display: inline-flex; }
