@@ -961,7 +961,45 @@ nav {
   .container { padding: 0 20px 60px; }
   .hero { grid-template-columns: 1fr; gap: 32px; padding: 48px 0 40px; }
   .input-col { position: static; }
-  .account-grid { grid-template-columns: 1fr; }
+
+  /* Account page: stack profile / tabs / sections / sign-out vertically.
+     `display: contents` lifts the sidebar's children up so their `order`
+     property controls placement within the now-flex account-grid. */
+  .account-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    grid-template-columns: none;
+  }
+  .account-sidebar { display: contents; }
+  .profile-card    { order: 1; }
+  .side-nav        { order: 2; }
+  .account-main    { order: 3; }
+  .logout-btn      { order: 4; margin-top: 8px; }
+
+  /* Side-nav becomes a horizontal pill-tab row. */
+  .side-nav {
+    flex-direction: row;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .side-nav-item {
+    flex: 1;
+    text-align: center;
+    border-left: none;
+    border-radius: 10px;
+    padding: 10px 8px;
+    font-size: 13.5px;
+  }
+  .side-nav-item.active {
+    background: rgba(255,255,255,0.06);
+    border-left-color: transparent;
+    color: var(--text);
+  }
   .score-row { grid-template-columns: 1fr 1fr; }
   .broaden-grid { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
@@ -970,7 +1008,11 @@ nav {
 @media (max-width: 560px) {
   .hero-h { font-size: 36px; }
   .score-row { grid-template-columns: 1fr; }
-  .stat-grid { grid-template-columns: 1fr; }
+  /* Stat grid: ANALYSES + COMPARISONS side-by-side, SAVED spans full width. */
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .stat-grid .stat-card:nth-child(3) { grid-column: 1 / -1; }
+  .stat-card { padding: 16px; }
+  .stat-value { font-size: 28px; }
   .results-header { flex-direction: column; gap: 10px; }
   .results-title { font-size: 17px; white-space: normal; }
 
