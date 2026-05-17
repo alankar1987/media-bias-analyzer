@@ -858,6 +858,7 @@ nav {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: .5px;
+  text-transform: capitalize;
 }
 .perspective-tag.conservative  { background: rgba(239,68,68,.15);   color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
 .perspective-tag.liberal       { background: rgba(59,130,246,.15);  color: #93c5fd; border: 1px solid rgba(59,130,246,.25); }
