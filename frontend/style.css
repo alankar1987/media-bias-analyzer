@@ -136,6 +136,7 @@ nav {
   background: rgba(255,255,255,0.07);
   border-color: var(--border);
 }
+.nav-right-group { display: flex; align-items: center; gap: 10px; }
 .nav-right { display: flex; align-items: center; gap: 10px; }
 .nav-hamburger {
   display: none;
