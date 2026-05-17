@@ -93,3 +93,43 @@ html,body{width:380px;background:#0a0d12;color:#fff;font-family:'DM Sans',system
 .vp-empty strong{color:#fff;display:block;margin-bottom:6px;font-size:14px}
 .vp-empty .vp-retry{margin-top:14px;display:inline-block;padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#fff;font:inherit;font-size:12px;cursor:pointer}
 .vp-empty .vp-retry:hover{background:rgba(255,255,255,0.06)}
+
+/* ── Share row ─────────────────────────────────── */
+.share-row {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.share-row-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  margin-right: 2px;
+}
+.share-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.88);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 0;
+}
+.share-btn:hover { background: rgba(255,255,255,0.1); }
+.share-toast {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f0f4f8;
+  color: #080b0f;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
