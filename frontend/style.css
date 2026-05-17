@@ -496,6 +496,57 @@ nav {
   background: var(--muted);
   flex-shrink: 0;
 }
+.results-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  position: relative;
+}
+.share-report-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 99px;
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  color: #0a0a0a;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 0 24px rgba(168,85,247,0.28);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.share-report-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+  box-shadow: 0 0 32px rgba(168,85,247,0.42);
+}
+.share-report-btn:active { transform: translateY(0); }
+.share-report-btn svg { display: block; }
+.share-report-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #11151b;
+  border: 1px solid var(--card-bd);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+  animation: shareReportPopIn .14s ease-out;
+}
+@keyframes shareReportPopIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.share-report-popover .share-btn { width: 32px; height: 32px; }
+.share-report-popover .share-btn.copy { width: auto; padding: 0 12px; }
 .saved-indicator {
   padding: 6px 14px;
   border-radius: 99px;

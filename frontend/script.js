@@ -200,21 +200,56 @@ function renderResults(payload) {
   const loggedIn = typeof getSession === 'function' && getSession();
   if (savedEl) savedEl.hidden = !loggedIn;
 
-  // Share row — signed-in users only (we need a saved analysis_id from /analyze).
+  // Share UI — signed-in users only (we need a saved analysis_id from /analyze).
   const analysisId = payload.analysis_id;
-  if (analysisId && resultsSection && window.VerisShare) {
-    resultsSection.querySelectorAll('.share-row').forEach((n) => n.remove());
-    const row = document.createElement('div');
-    row.className = 'share-row';
-    resultsSection.appendChild(row);
-    window.VerisShare.renderShareRow(
-      row,
-      analysisId,
-      data.title || '',
-      data.political_lean?.label || '',
-      data.fact_check?.score,
-      (ok) => showShareToast(ok ? 'Link copied to clipboard' : 'Could not copy'),
-    );
+  const shareReportBtn = document.getElementById('share-report-btn');
+  if (analysisId && window.VerisShare) {
+    // Top-right "Share report" button — primary CTA, opens a popover.
+    if (shareReportBtn) {
+      shareReportBtn.hidden = false;
+      shareReportBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        // Close existing popovers.
+        document.querySelectorAll('.share-report-popover').forEach((p) => p.remove());
+        const pop = document.createElement('div');
+        pop.className = 'share-report-popover';
+        shareReportBtn.parentElement.appendChild(pop);
+        window.VerisShare.renderShareRow(
+          pop,
+          analysisId,
+          data.title || '',
+          data.political_lean?.label || '',
+          data.fact_check?.score,
+          (ok) => showShareToast(ok ? 'Link copied to clipboard' : 'Could not copy'),
+        );
+        // Close on next outside click.
+        setTimeout(() => {
+          document.addEventListener('click', function close(e) {
+            if (!pop.contains(e.target) && e.target !== shareReportBtn) {
+              pop.remove();
+              document.removeEventListener('click', close);
+            }
+          });
+        }, 0);
+      };
+    }
+    // Bottom share row — kept as a fallback / scroll-discoverable action.
+    if (resultsSection) {
+      resultsSection.querySelectorAll('.share-row').forEach((n) => n.remove());
+      const row = document.createElement('div');
+      row.className = 'share-row';
+      resultsSection.appendChild(row);
+      window.VerisShare.renderShareRow(
+        row,
+        analysisId,
+        data.title || '',
+        data.political_lean?.label || '',
+        data.fact_check?.score,
+        (ok) => showShareToast(ok ? 'Link copied to clipboard' : 'Could not copy'),
+      );
+    }
+  } else if (shareReportBtn) {
+    shareReportBtn.hidden = true;
   }
 
   const hero = document.querySelector('.hero');
