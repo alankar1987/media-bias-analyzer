@@ -1,6 +1,8 @@
 name = "media-bias-analyzer"
 compatibility_date = "2025-01-01"
+main = "src/worker.js"
 
 [assets]
 directory = "./frontend"
 not_found_handling = "404-page"
+binding = "ASSETS"
