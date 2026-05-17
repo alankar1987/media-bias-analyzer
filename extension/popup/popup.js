@@ -229,7 +229,7 @@ function renderLoading(tab, startedAt) {
 }
 
 // ── State: results ──
-function renderResults(tab, data) {
+function renderResults(tab, data, analysisId) {
   clearLoadingTimers();
   // Field map: backend returns the same shape the website's results page consumes.
   // We're defensive about missing fields since the analyzer JSON has evolved.
@@ -331,11 +331,38 @@ function renderResults(tab, data) {
     </div>
     ${summary ? `<div class="vp-summary">${escapeHtml(summary)}</div>` : ""}
     ${broadenHtml}
+    <div id="results-share"></div>
     <div class="vp-cta">
       <button class="vp-cta-primary" id="btn-full">Open full report on Veris ↗</button>
     </div>
   `;
   bindHeader();
+
+  // Share row — signed-in + we have a saved analysis_id.
+  if (_session?.user && analysisId && window.VerisShare) {
+    const container = document.getElementById('results-share');
+    if (container) {
+      container.innerHTML = "";
+      const row = document.createElement('div');
+      row.className = 'share-row';
+      container.appendChild(row);
+      window.VerisShare.renderShareRow(
+        row,
+        analysisId,
+        title,
+        pl.label || '',
+        fc.score,
+        (ok) => {
+          const t = document.createElement('div');
+          t.className = 'share-toast';
+          t.textContent = ok ? 'Copied' : 'Copy failed';
+          document.body.appendChild(t);
+          setTimeout(() => t.remove(), 1600);
+        },
+      );
+    }
+  }
+
   document.getElementById("btn-full")?.addEventListener("click", () => {
     chrome.tabs.create({ url: fullReportHref });
     window.close();
@@ -384,7 +411,7 @@ async function init() {
     return;
   }
   if (resp.status === "analyzing") renderLoading(tab, resp.entry?.startedAt);
-  else if (resp.status === "done") renderResults(tab, resp.entry.result);
+  else if (resp.status === "done") renderResults(tab, resp.entry.result, resp.entry.analysisId);
   else if (resp.status === "error") renderError(tab, resp.entry?.error);
   else renderIdle(tab);
 }

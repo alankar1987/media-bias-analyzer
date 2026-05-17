@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel, model_validator
 from dotenv import load_dotenv
 
@@ -14,7 +14,9 @@ import hashlib
 
 from analyzer import extract_text_from_url, analyze_content
 from auth import verify_jwt, get_quota, QuotaInfo
-from db import save_analysis, get_history, get_analysis, delete_user as db_delete_user, find_cached_analysis
+from db import save_analysis, get_history, get_analysis, delete_user as db_delete_user, find_cached_analysis, get_public_analysis
+from db import _supabase as supabase_client  # used for storage access
+from share import render_share_html, get_or_create_og_png, render_og_image
 import stripe_client
 from rate_limit import get_limiter, ANON_COOKIE_NAME
 
@@ -25,6 +27,26 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+SHARE_404_HTML = """<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Analysis not found — Veris</title>
+<style>
+  body{margin:0;background:#080b0f;color:#f0f4f8;font-family:'DM Sans',sans-serif;
+       display:grid;place-items:center;min-height:100vh;padding:24px;text-align:center}
+  h1{font-size:28px;margin:0 0 12px}
+  p{color:rgba(255,255,255,0.6);margin:0 0 24px;font-size:15px}
+  a{color:#22d3ee;text-decoration:none;font-weight:600}
+</style>
+</head><body>
+<div>
+  <h1>This analysis isn't available.</h1>
+  <p>It may have been deleted, or the link is wrong.</p>
+  <a href="https://veris.news/">← Back to Veris</a>
+</div>
+</body></html>"""
 
 MIN_TEXT_LENGTH = 50
 
@@ -82,6 +104,8 @@ class AnalyzeResponse(BaseModel):
     error: Optional[str] = None
     source_url: Optional[str] = None
     text_preview: Optional[str] = None
+    analysis_id: Optional[str] = None
+    cached: Optional[bool] = None
 
 
 class CompareRequest(BaseModel):
@@ -264,6 +288,39 @@ async def stripe_webhook(request: Request):
     return {"received": True}
 
 
+@app.get("/a/{analysis_id}", tags=["share"])
+async def share_page(analysis_id: str):
+    """Public, no-auth share page for a single analysis."""
+    row = get_public_analysis(analysis_id=analysis_id)
+    if not row:
+        return HTMLResponse(content=SHARE_404_HTML, status_code=404)
+    return HTMLResponse(content=render_share_html(row), status_code=200)
+
+
+@app.get("/og/{analysis_id}.png", tags=["share"])
+async def og_image(analysis_id: str):
+    """Open Graph image for a share page. 302 to Supabase Storage on hit;
+    inline PNG fallback if storage upload fails."""
+    row = get_public_analysis(analysis_id=analysis_id)
+    if not row:
+        # 404 — simpler than serving a fallback PNG to crawlers.
+        return Response(status_code=404)
+    url = get_or_create_og_png(row, supabase=supabase_client)
+    if url:
+        return RedirectResponse(
+            url=url,
+            status_code=302,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    # Storage failed — render inline.
+    try:
+        png = render_og_image(row)
+        return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+    except Exception as exc:
+        logger.error("og inline render failed for %s: %s", analysis_id, exc)
+        return Response(status_code=500)
+
+
 @app.post("/analyze", response_model=AnalyzeResponse, tags=["analysis"])
 async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional[str] = Header(default=None)):
     user = None
@@ -358,6 +415,7 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
             raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
 
     # ── 4. Save if logged in ────────────────────────────────────────────────
+    saved_id: Optional[str] = None
     if user:
         lean = result.get("political_lean", {})
         fc = result.get("fact_check", {})
@@ -372,7 +430,7 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
             except Exception:
                 pass
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, lambda: save_analysis(
+        saved_id = await loop.run_in_executor(None, lambda: save_analysis(
             user_id=user["id"],
             url=source_url,
             source_name=derived_source,
@@ -388,7 +446,14 @@ async def analyze(req: AnalyzeRequest, request: Request, authorization: Optional
     preview_len = 300
     preview = article_text[:preview_len] + "…" if len(article_text) > preview_len else article_text
 
-    response = JSONResponse(content={"success": True, "data": result, "source_url": source_url, "text_preview": preview, "cached": cached})
+    response = JSONResponse(content={
+        "success": True,
+        "data": result,
+        "source_url": source_url,
+        "text_preview": preview,
+        "cached": cached,
+        "analysis_id": saved_id,
+    })
 
     # Set anon cookie for first-time anonymous users
     if user is None:

@@ -200,6 +200,23 @@ function renderResults(payload) {
   const loggedIn = typeof getSession === 'function' && getSession();
   if (savedEl) savedEl.hidden = !loggedIn;
 
+  // Share row — signed-in users only (we need a saved analysis_id from /analyze).
+  const analysisId = payload.analysis_id;
+  if (analysisId && resultsSection && window.VerisShare) {
+    resultsSection.querySelectorAll('.share-row').forEach((n) => n.remove());
+    const row = document.createElement('div');
+    row.className = 'share-row';
+    resultsSection.appendChild(row);
+    window.VerisShare.renderShareRow(
+      row,
+      analysisId,
+      data.title || '',
+      data.political_lean?.label || '',
+      data.fact_check?.score,
+      (ok) => showShareToast(ok ? 'Link copied to clipboard' : 'Could not copy'),
+    );
+  }
+
   const hero = document.querySelector('.hero');
   if (hero) hero.style.display = 'none';
   resultsSection.classList.remove("hidden");
@@ -940,3 +957,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('[veris] ?url= autofill failed:', err);
   }
 });
+
+function showShareToast(text) {
+  document.querySelectorAll('.share-toast').forEach((n) => n.remove());
+  const t = document.createElement('div');
+  t.className = 'share-toast';
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}

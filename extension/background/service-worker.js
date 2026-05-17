@@ -118,7 +118,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             envelope = { success: false, error: err.message || "Network error" };
           }
           if (envelope.success) {
-            state.set(tabId, { url, status: "done", result: envelope.data });
+            state.set(tabId, {
+              url,
+              status: "done",
+              result: envelope.data,
+              analysisId: envelope.analysis_id || null,
+            });
           } else {
             console.warn("[Veris bg] analysis failed:", envelope.error);
             state.set(tabId, { url, status: "error", error: envelope.error || "Analysis failed" });

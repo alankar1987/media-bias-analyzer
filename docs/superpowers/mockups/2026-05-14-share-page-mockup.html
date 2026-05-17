@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Veris share — mockup</title>
+<style>
+  :root {
+    --bg: #080b0f;
+    --bg2: #0e1117;
+    --card: rgba(255,255,255,0.04);
+    --card-bd: rgba(255,255,255,0.08);
+    --text: #f0f4f8;
+    --muted: rgba(255,255,255,0.55);
+    --muted-md: rgba(255,255,255,0.72);
+    --muted-hi: rgba(255,255,255,0.88);
+    --cyan: #22d3ee;
+    --cyan-bg: rgba(34,211,238,0.09);
+    --cyan-bd: rgba(34,211,238,0.22);
+    --purple: #a855f7;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --green: #4ade80;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 20px 80px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .demo-wrap { max-width: 1100px; margin: 0 auto; }
+  .demo-header {
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+  }
+  .demo-header h1 { font-size: 22px; margin: 0 0 4px; }
+  .demo-header p { font-size: 13px; color: var(--muted); margin: 0; }
+  .demo-section {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+  }
+  .demo-label {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 18px; font-weight: 600;
+  }
+
+  /* ============ SHARE PAGE ============ */
+  .share-frame {
+    background: var(--bg);
+    border: 1px solid var(--card-bd);
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--card-bd);
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 20px; font-weight: 700; letter-spacing: -0.5px;
+  }
+  .brand-mark {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #0a0a0a;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #22d3ee, #a855f7);
+  }
+  .brand-mark::after {
+    content: "V"; font-weight: 800; font-size: 14px; color: #0a0a0a;
+  }
+  .nav-cta {
+    font-size: 13px; padding: 8px 16px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    color: #0a0a0a; font-weight: 600; cursor: pointer; border: none;
+  }
+
+  .share-body { padding: 48px 64px 64px; max-width: 920px; margin: 0 auto; }
+
+  .ribbon {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px;
+    background: var(--cyan-bg); border: 1px solid var(--cyan-bd);
+    color: var(--cyan); font-size: 12px; font-weight: 600;
+    margin-bottom: 20px;
+  }
+  .ribbon-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--cyan);
+  }
+
+  .share-headline {
+    font-size: 32px; font-weight: 700; line-height: 1.25;
+    letter-spacing: -0.5px; margin: 0 0 14px;
+  }
+  .share-meta {
+    display: flex; gap: 14px; align-items: center;
+    font-size: 14px; color: var(--muted-md);
+    margin-bottom: 36px;
+  }
+  .share-meta a { color: var(--cyan); text-decoration: none; }
+  .share-meta-sep { opacity: 0.4; }
+
+  /* Score cards row */
+  .scores {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    margin-bottom: 36px;
+  }
+  .score-card {
+    padding: 22px 22px; border-radius: 14px;
+    background: var(--card);
+    border: 1px solid var(--card-bd);
+  }
+  .score-card.lean { border-color: rgba(34,211,238,0.28); }
+  .score-card.tone { border-color: rgba(74,222,128,0.28); }
+  .score-card.facts { border-color: rgba(74,222,128,0.28); }
+  .score-card-label {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; margin-bottom: 8px;
+  }
+  .score-card-value {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+    text-transform: capitalize;
+  }
+  .score-card.lean .score-card-value { color: var(--cyan); }
+  .score-card.tone .score-card-value { color: var(--green); }
+  .score-card.facts .score-card-value { color: var(--green); }
+  .score-card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Summary */
+  .summary-prose {
+    background: var(--card);
+    border: 1px solid var(--card-bd);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+  }
+  .summary-prose-label {
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; margin-bottom: 10px;
+  }
+  .summary-prose-text {
+    font-size: 15px; line-height: 1.7; color: var(--muted-hi); margin: 0;
+  }
+
+  /* Accordion (compact) */
+  .acc {
+    background: var(--card);
+    border: 1px solid var(--card-bd);
+    border-radius: 12px;
+    padding: 16px 22px; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+  }
+  .acc-title { font-size: 14px; font-weight: 600; }
+  .acc-icon { color: var(--muted); font-size: 16px; }
+
+  /* Broaden your view */
+  .broaden { margin-top: 36px; }
+  .broaden-heading {
+    font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.3px;
+  }
+  .broaden-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+  .broaden-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .broaden-card {
+    padding: 14px 16px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--card-bd);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .broaden-tag {
+    font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--cyan); font-weight: 700;
+  }
+  .broaden-tag.right { color: var(--red); }
+  .broaden-tag.center { color: var(--amber); }
+  .broaden-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; }
+  .broaden-link {
+    font-size: 11px; color: var(--cyan); text-decoration: none; margin-top: auto;
+  }
+
+  /* Share row */
+  .share-row {
+    margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--card-bd);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .share-row-label {
+    font-size: 13px; color: var(--muted); margin-right: 4px;
+  }
+  .share-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--card); border: 1px solid var(--card-bd);
+    color: var(--muted-hi); cursor: pointer;
+    transition: background 0.15s;
+  }
+  .share-btn:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+  .share-btn.copy { width: auto; padding: 0 14px; gap: 6px; display: flex; font-size: 12px; font-weight: 500; }
+
+  /* CTA */
+  .footer-cta {
+    margin-top: 56px; padding: 32px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(34,211,238,0.08), rgba(168,85,247,0.08));
+    border: 1px solid rgba(168,85,247,0.18);
+    text-align: center;
+  }
+  .footer-cta h3 { font-size: 22px; margin: 0 0 8px; letter-spacing: -0.3px; }
+  .footer-cta p { font-size: 14px; color: var(--muted-md); margin: 0 0 18px; }
+  .footer-cta button {
+    padding: 12px 24px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    color: #0a0a0a; font-weight: 600; border: none; cursor: pointer;
+    font-size: 14px;
+  }
+
+  /* ============ OG IMAGE PREVIEW (1200x630) ============ */
+  .og-stage {
+    background: #1a1d23;
+    padding: 32px;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .og-card {
+    width: 1200px; height: 630px;
+    transform: scale(0.6); transform-origin: top left;
+    background: #0a0d12;
+    position: relative; overflow: hidden;
+    border-radius: 12px;
+  }
+  .og-card::before {
+    content: ""; position: absolute; inset: -10%;
+    background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.18) 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(168,85,247,0.14) 0%, transparent 50%);
+  }
+  .og-content {
+    position: relative; padding: 72px 80px;
+    height: 100%; display: flex; flex-direction: column;
+    color: #f0f4f8;
+  }
+  .og-brand { display: flex; align-items: center; gap: 16px; }
+  .og-brand-mark {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #22d3ee, #a855f7);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 28px; color: #0a0a0a;
+  }
+  .og-brand-text { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .og-source {
+    margin-top: 56px; font-size: 22px; color: rgba(255,255,255,0.6);
+    text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
+  }
+  .og-headline {
+    margin-top: 14px;
+    font-size: 56px; line-height: 1.15; font-weight: 700;
+    letter-spacing: -1px; max-width: 980px;
+  }
+  .og-scores {
+    margin-top: auto;
+    display: flex; gap: 18px;
+  }
+  .og-score {
+    flex: 1; padding: 22px 28px; border-radius: 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .og-score .label {
+    font-size: 14px; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(255,255,255,0.55); font-weight: 600;
+  }
+  .og-score .value {
+    margin-top: 8px;
+    font-size: 36px; font-weight: 700; letter-spacing: -0.5px;
+    text-transform: capitalize;
+  }
+  .og-score.lean { border-color: rgba(34,211,238,0.45); }
+  .og-score.lean .value { color: #22d3ee; }
+  .og-score.tone { border-color: rgba(74,222,128,0.45); }
+  .og-score.tone .value { color: #4ade80; }
+  .og-score.facts { border-color: rgba(74,222,128,0.45); }
+  .og-score.facts .value { color: #4ade80; }
+
+  /* ============ FEED PREVIEW ============ */
+  .feed-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .feed-card {
+    background: #1d2226; border-radius: 12px; padding: 18px;
+    color: #d6dde3; max-width: 480px;
+  }
+  .feed-card-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .feed-avatar { width: 36px; height: 36px; border-radius: 50%; background: #444; }
+  .feed-meta { font-size: 13px; }
+  .feed-meta b { display: block; font-weight: 600; }
+  .feed-meta span { color: #888; font-size: 12px; }
+  .feed-body { font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
+  .feed-link-card {
+    border: 1px solid #2a2f33; border-radius: 8px; overflow: hidden;
+    background: #15191c;
+  }
+  .feed-og-img {
+    aspect-ratio: 1.91; background: #0a0d12;
+    position: relative; overflow: hidden;
+  }
+  .feed-og-img::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.25) 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(168,85,247,0.2) 0%, transparent 50%);
+  }
+  .feed-og-content {
+    position: absolute; inset: 0; padding: 18px 22px;
+    display: flex; flex-direction: column;
+  }
+  .feed-og-headline { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .feed-og-pills {
+    margin-top: auto; display: flex; gap: 6px;
+  }
+  .feed-og-pill {
+    font-size: 9px; font-weight: 700; padding: 4px 8px; border-radius: 999px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .feed-og-pill.lean { color: #22d3ee; border-color: rgba(34,211,238,0.4); }
+  .feed-og-pill.tone { color: #4ade80; border-color: rgba(74,222,128,0.4); }
+  .feed-og-pill.facts { color: #4ade80; border-color: rgba(74,222,128,0.4); }
+  .feed-link-meta {
+    padding: 10px 14px; font-size: 12px; color: #777;
+    border-top: 1px solid #2a2f33;
+  }
+  .feed-link-meta b { display: block; color: #c8ced4; font-size: 13px; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<div class="demo-wrap">
+
+  <div class="demo-header">
+    <h1>Veris — share page mockup</h1>
+    <p>Three views: (1) the actual share page at <code>veris.news/a/{id}</code>, (2) the Open Graph card that appears in social feeds, (3) how that card looks in a real LinkedIn/X post.</p>
+  </div>
+
+  <!-- ===== SECTION 1: share page ===== -->
+  <div class="demo-section">
+    <div class="demo-label">1 ·  Share page  ·  veris.news/a/3f2a-9b1c</div>
+
+    <div class="share-frame">
+      <div class="nav">
+        <div class="nav-brand">
+          <div class="brand-mark"></div>
+          <span>veris</span>
+        </div>
+        <button class="nav-cta">Analyze your own →</button>
+      </div>
+
+      <div class="share-body">
+        <div class="ribbon">
+          <div class="ribbon-dot"></div>
+          Analyzed on Veris · May 14, 2026
+        </div>
+
+        <h1 class="share-headline">
+          Supreme Court's Voting Rights Decision: Law Meets Politics in a Pivotal Ruling
+        </h1>
+        <div class="share-meta">
+          <span><b>The Guardian</b></span>
+          <span class="share-meta-sep">·</span>
+          <a href="#">View original article ↗</a>
+        </div>
+
+        <div class="scores">
+          <div class="score-card lean">
+            <div class="score-card-label">Political Lean</div>
+            <div class="score-card-value">Slight Left</div>
+            <div class="score-card-sub">-2 of -10 to +10</div>
+          </div>
+          <div class="score-card tone">
+            <div class="score-card-label">Tone</div>
+            <div class="score-card-value">Positive</div>
+            <div class="score-card-sub">+3 of -5 to +5</div>
+          </div>
+          <div class="score-card facts">
+            <div class="score-card-label">Facts</div>
+            <div class="score-card-value">High</div>
+            <div class="score-card-sub">85/100 verifiable</div>
+          </div>
+        </div>
+
+        <div class="summary-prose">
+          <div class="summary-prose-label">Summary</div>
+          <p class="summary-prose-text">The article frames the Supreme Court's decision as a balance between legal precedent and political consequence. While the reporting is factually grounded and well-sourced, the framing favors a left-leaning interpretation by emphasizing voter-access concerns over the conservative legal rationale. Source quality is high; opinion-marked passages are clearly labeled.</p>
+        </div>
+
+        <div class="acc">
+          <span class="acc-title">Biased language detected (4 phrases)</span>
+          <span class="acc-icon">›</span>
+        </div>
+        <div class="acc">
+          <span class="acc-title">Fact-check breakdown (12 claims verified)</span>
+          <span class="acc-icon">›</span>
+        </div>
+        <div class="acc">
+          <span class="acc-title">Sources cited (8)</span>
+          <span class="acc-icon">›</span>
+        </div>
+
+        <div class="broaden">
+          <div class="broaden-heading">Broaden your view</div>
+          <div class="broaden-sub">Other perspectives on this story</div>
+          <div class="broaden-grid">
+            <div class="broaden-card">
+              <div class="broaden-tag">Left</div>
+              <div class="broaden-title">How the ruling will reshape voter access</div>
+              <a class="broaden-link" href="#">Search Google ↗</a>
+            </div>
+            <div class="broaden-card">
+              <div class="broaden-tag center">Center</div>
+              <div class="broaden-title">Legal precedent behind the decision</div>
+              <a class="broaden-link" href="#">Search Google ↗</a>
+            </div>
+            <div class="broaden-card">
+              <div class="broaden-tag right">Right</div>
+              <div class="broaden-title">Conservative case for the ruling</div>
+              <a class="broaden-link" href="#">Search Google ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="share-row">
+          <span class="share-row-label">Share this analysis:</span>
+          <button class="share-btn" title="Share on X">𝕏</button>
+          <button class="share-btn" title="Share on LinkedIn">in</button>
+          <button class="share-btn" title="Share on WhatsApp">✆</button>
+          <button class="share-btn copy">⎘ Copy link</button>
+        </div>
+
+        <div class="footer-cta">
+          <h3>Read news with clearer eyes.</h3>
+          <p>Veris analyzes any article for political lean, tone, and factual accuracy. Free to try.</p>
+          <button>Analyze your article →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 2: OG card ===== -->
+  <div class="demo-section">
+    <div class="demo-label">2 ·  Open Graph card  ·  1200 × 630px (rendered at 60%)</div>
+
+    <div class="og-stage" style="width: 720px; height: 378px;">
+      <div class="og-card">
+        <div class="og-content">
+          <div class="og-brand">
+            <div class="og-brand-mark">V</div>
+            <div class="og-brand-text">veris</div>
+          </div>
+          <div class="og-source">The Guardian  ·  85/100 facts</div>
+          <div class="og-headline">
+            Supreme Court's Voting Rights Decision: Law Meets Politics
+          </div>
+          <div class="og-scores">
+            <div class="og-score lean">
+              <div class="label">Lean</div>
+              <div class="value">Slight Left</div>
+            </div>
+            <div class="og-score tone">
+              <div class="label">Tone</div>
+              <div class="value">Positive</div>
+            </div>
+            <div class="og-score facts">
+              <div class="label">Facts</div>
+              <div class="value">High</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 3: feed preview ===== -->
+  <div class="demo-section">
+    <div class="demo-label">3 ·  How it looks in a feed</div>
+
+    <div class="feed-row">
+      <!-- X / LinkedIn-style card -->
+      <div class="feed-card">
+        <div class="feed-card-header">
+          <div class="feed-avatar"></div>
+          <div class="feed-meta">
+            <b>Alankar</b>
+            <span>2h · 🌐</span>
+          </div>
+        </div>
+        <div class="feed-body">
+          Curious how this Guardian piece reads when you strip out the framing — analyzed it on Veris:
+        </div>
+        <div class="feed-link-card">
+          <div class="feed-og-img">
+            <div class="feed-og-content">
+              <div class="feed-og-headline">Supreme Court's Voting Rights Decision: Law Meets Politics</div>
+              <div class="feed-og-pills">
+                <span class="feed-og-pill lean">Slight Left</span>
+                <span class="feed-og-pill tone">Positive</span>
+                <span class="feed-og-pill facts">85/100</span>
+              </div>
+            </div>
+          </div>
+          <div class="feed-link-meta">
+            <b>Supreme Court's Voting Rights Decision · veris.news</b>
+            Analysis on Veris — political lean, tone, facts.
+          </div>
+        </div>
+      </div>
+
+      <!-- WhatsApp-style card -->
+      <div class="feed-card" style="background:#054640;">
+        <div class="feed-card-header">
+          <div class="feed-avatar"></div>
+          <div class="feed-meta">
+            <b style="color:#fff;">Family group</b>
+            <span style="color:#a5c4bd;">today · WhatsApp</span>
+          </div>
+        </div>
+        <div class="feed-body" style="color:#e8f3f1;">
+          Worth a read — here's the bias check 👇
+        </div>
+        <div class="feed-link-card" style="background:#0e3b34;border-color:#1a5048;">
+          <div class="feed-og-img">
+            <div class="feed-og-content">
+              <div class="feed-og-headline">Supreme Court's Voting Rights Decision: Law Meets Politics</div>
+              <div class="feed-og-pills">
+                <span class="feed-og-pill lean">Slight Left</span>
+                <span class="feed-og-pill tone">Positive</span>
+                <span class="feed-og-pill facts">85/100</span>
+              </div>
+            </div>
+          </div>
+          <div class="feed-link-meta" style="background:#0e3b34;border-color:#1a5048;color:#a5c4bd;">
+            <b style="color:#e8f3f1;">veris.news/a/3f2a-9b1c</b>
+            Read full analysis →
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

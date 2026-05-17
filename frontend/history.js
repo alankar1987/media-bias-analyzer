@@ -130,12 +130,56 @@ function renderCards(items) {
           </div>
         </div>
         <div class="history-badges">${leanPill}${factScorePill}</div>
+        <button class="share-history-btn"
+                data-id="${item.id}"
+                data-headline="${escapeH(item.headline || '')}"
+                data-lean="${escapeH(item.lean_label || '')}"
+                data-fact="${item.fact_score ?? ''}"
+                title="Share">⤴</button>
       `;
-      itemEl.addEventListener('click', () => openHistoryItem(item.id));
+      itemEl.addEventListener('click', (ev) => {
+        if (ev.target.closest('.share-history-btn')) return;  // share clicks handled separately
+        openHistoryItem(item.id);
+      });
       groupDiv.appendChild(itemEl);
     });
     list.appendChild(groupDiv);
   });
+
+  // Delegated share-button handler: bind once on `list`, survive re-renders.
+  if (!list._verisShareDelegated) {
+    list._verisShareDelegated = true;
+    list.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.share-history-btn');
+      if (!btn || !list.contains(btn)) return;
+      ev.stopPropagation();
+      document.querySelectorAll('.share-popover').forEach((p) => p.remove());
+      const pop = document.createElement('div');
+      pop.className = 'share-popover';
+      btn.appendChild(pop);
+      const factScore = btn.dataset.fact ? parseInt(btn.dataset.fact, 10) : null;
+      window.VerisShare.renderShareRow(
+        pop,
+        btn.dataset.id,
+        btn.dataset.headline,
+        btn.dataset.lean,
+        factScore,
+        (ok) => {
+          if (typeof showShareToast === 'function') {
+            showShareToast(ok ? 'Link copied to clipboard' : 'Could not copy');
+          }
+        },
+      );
+      setTimeout(() => {
+        document.addEventListener('click', function close(e) {
+          if (!pop.contains(e.target)) {
+            pop.remove();
+            document.removeEventListener('click', close);
+          }
+        });
+      }, 0);
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

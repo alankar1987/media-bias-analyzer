@@ -125,3 +125,38 @@ def delete_user(*, user_id: str) -> None:
     # Finally remove the auth user. Surface failures — the route's caller should
     # see a 500 rather than silently returning success when this didn't work.
     _supabase.auth.admin.delete_user(user_id)
+
+
+def get_public_analysis(*, analysis_id: str) -> Optional[dict]:
+    """Fetch an analysis by id without checking user. Honors shareable=true gate.
+
+    Returns None if not found, not shareable, or on error.
+    """
+    try:
+        res = (
+            _supabase.table("analyses")
+            .select("*")
+            .eq("id", analysis_id)
+            .eq("shareable", True)
+            .maybe_single()
+            .execute()
+        )
+        return res.data
+    except Exception as exc:
+        logger.error("get_public_analysis(%s) failed: %s", analysis_id, exc)
+        return None
+
+
+def set_shareable(*, analysis_id: str, user_id: str, shareable: bool) -> bool:
+    """Toggle the shareable flag on an analysis the user owns.
+
+    Returns True only when a row was actually updated. PostgREST does not raise
+    when zero rows match — without this check, a wrong analysis_id or user_id
+    would silently return success.
+    """
+    try:
+        res = _supabase.table("analyses").update({"shareable": shareable}).eq("id", analysis_id).eq("user_id", user_id).execute()
+        return bool(res.data)
+    except Exception as exc:
+        logger.error("set_shareable(%s) failed: %s", analysis_id, exc)
+        return False
