@@ -914,7 +914,31 @@ analyzeBtn.addEventListener("click", () => {
 initAccordions();
 
 document.addEventListener('DOMContentLoaded', () => {
+  // ── Mobile nav: hamburger toggles the inline nav-links into a dropdown ──
+  const navEl = document.getElementById('nav');
+  const hamburger = document.getElementById('nav-hamburger');
+  if (navEl && hamburger) {
+    hamburger.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const open = navEl.classList.toggle('menu-open');
+      hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', (ev) => {
+      if (!navEl.contains(ev.target)) {
+        navEl.classList.remove('menu-open');
+        hamburger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
   // ── Nav link routing ──
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Close mobile menu on selection.
+      if (navEl) navEl.classList.remove('menu-open');
+      if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
+    });
+  });
   document.querySelectorAll('.nav-link').forEach(btn => {
     btn.addEventListener('click', () => {
       const page = btn.dataset.page;
