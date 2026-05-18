@@ -372,9 +372,28 @@ function renderResults(tab, data, analysisId) {
 // ── State: error ──
 function renderError(tab, message) {
   clearLoadingTimers();
+  const raw = String(message || "");
+  const lower = raw.toLowerCase();
+
+  // Anon-limit gate: user hit the 2-free-analyses cap. Show a tailored
+  // "sign in to keep going" UI instead of a generic error.
+  if (lower === "anon_limit") {
+    root.innerHTML = `
+      ${header("Sign in to continue")}
+      <div class="vp-empty">
+        <strong>You've used your 2 free analyses</strong>
+        Sign in with Google to keep analyzing articles — Free includes
+        3 analyses/month, Pro gets 30.
+        <br/><button class="vp-retry" id="btn-anon-signin">Sign in with Google</button>
+      </div>
+    `;
+    bindHeader();
+    document.getElementById("btn-anon-signin")?.addEventListener("click", handleSignIn);
+    return;
+  }
+
   // Quota-exceeded is a known case worth a tailored CTA — backend returns
   // "quota_exceeded" or wording like "Sign up free" / "upgrade".
-  const lower = String(message || "").toLowerCase();
   const isQuota = lower.includes("quota") || lower.includes("upgrade") || lower.includes("sign up");
   const cta = isQuota
     ? `<a class="vp-retry" href="${VERIS_HOME}#account" target="_blank" rel="noopener noreferrer">Upgrade to Pro ↗</a>`

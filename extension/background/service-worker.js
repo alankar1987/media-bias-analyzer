@@ -15,6 +15,27 @@
 import { analyzeUrl, getUsage } from "../lib/api.js";
 import { signIn, signOut, getSession } from "../lib/auth.js";
 
+// Anonymous extension users get N free analyses before we require sign-in.
+// This is a soft, client-side conversion gate — the backend still has its
+// own quota for signed-in users. Lives in chrome.storage.local so it
+// persists across worker restarts but resets if the user clears extension
+// data (which we consider fine — that's a friction point itself).
+const ANON_FREE_LIMIT = 2;
+const ANON_COUNT_KEY = "veris_anon_count";
+
+async function getAnonCount() {
+  const obj = await chrome.storage.local.get(ANON_COUNT_KEY);
+  return obj[ANON_COUNT_KEY] || 0;
+}
+async function incrementAnonCount() {
+  const next = (await getAnonCount()) + 1;
+  await chrome.storage.local.set({ [ANON_COUNT_KEY]: next });
+  return next;
+}
+async function resetAnonCount() {
+  await chrome.storage.local.remove(ANON_COUNT_KEY);
+}
+
 const STORAGE_KEY = "veris_state_v1";
 const KEEPALIVE_ALARM = "veris_keepalive";
 
@@ -103,6 +124,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             sendResponse({ ok: false, error: "missing tabId or url" });
             return;
           }
+
+          // Anon conversion gate: after 2 free analyses, require sign-in.
+          const session = await getSession();
+          if (!session) {
+            const count = await getAnonCount();
+            if (count >= ANON_FREE_LIMIT) {
+              state.set(tabId, { url, status: "error", error: "anon_limit" });
+              await saveState();
+              sendResponse({ ok: true });
+              chrome.runtime
+                .sendMessage({ type: "ANALYSIS_COMPLETE", tabId })
+                .catch(() => { /* popup likely closed; ignore */ });
+              break;
+            }
+          }
+
           state.set(tabId, { url, status: "analyzing", startedAt: Date.now() });
           await saveState();
           setKeepAlive(true);
@@ -124,6 +161,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               result: envelope.data,
               analysisId: envelope.analysis_id || null,
             });
+            // Only successful analyses count toward the anon gate.
+            if (!session) {
+              try { await incrementAnonCount(); }
+              catch (e) { console.warn("[Veris bg] incrementAnonCount failed", e); }
+            }
           } else {
             console.warn("[Veris bg] analysis failed:", envelope.error);
             state.set(tabId, { url, status: "error", error: envelope.error || "Analysis failed" });
@@ -146,6 +188,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "SIGN_IN": {
           try {
             const session = await signIn();
+            // Once signed in, the anon-gate doesn't apply — clear the counter
+            // and any tab still parked in the "anon_limit" error state so the
+            // popup can re-render to idle (ready to analyze).
+            try { await resetAnonCount(); } catch (_) {}
+            for (const [tid, entry] of state) {
+              if (entry?.error === "anon_limit") state.delete(tid);
+            }
+            await saveState();
             sendResponse({ ok: true, session });
           } catch (err) {
             console.warn("[Veris bg] sign-in failed", err);
