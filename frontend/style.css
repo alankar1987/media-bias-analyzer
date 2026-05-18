@@ -1628,3 +1628,104 @@ nav {
 }
 .share-popover .share-btn { width: 32px; height: 32px; }
 .share-popover .share-btn.copy { width: auto; padding: 0 12px; }
+
+/* ─────────── Mobile Account page rules (must come AFTER desktop
+   .account-grid / .account-sidebar / .profile-card / .stat-grid rules
+   so source-order wins at ≤768px) ─────────── */
+@media (max-width: 768px) {
+  /* Collapse the 2-col grid → single column flex flow. */
+  .account-grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+    grid-template-columns: none;
+  }
+  /* Lift sidebar's children up as direct flex items so we can reorder. */
+  .account-sidebar {
+    display: contents;
+  }
+  .profile-card { order: 1; padding: 24px 20px; text-align: center; }
+  .side-nav     { order: 2; }
+  .account-main { order: 3; }
+  .logout-btn   { order: 4; margin-top: 8px; width: 100%; }
+
+  .plan-badge { white-space: nowrap; }
+
+  /* Side-nav as a segmented tab control. */
+  .side-nav {
+    flex-direction: row;
+    gap: 4px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 4px;
+  }
+  .side-nav-item {
+    flex: 1;
+    padding: 8px 6px;
+    border: 1px solid transparent;
+    border-left: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    text-align: center;
+    font-size: 11.5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .side-nav-item.active {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border-color: rgba(255,255,255,0.12);
+    border-left-color: rgba(255,255,255,0.12);
+  }
+  .side-nav-item.danger.active {
+    color: #fca5a5;
+    border-color: rgba(239,68,68,0.3);
+    border-left-color: rgba(239,68,68,0.3);
+  }
+
+  /* Stat grid: 2-col with Saved spanning full width as a wide horizontal card. */
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { padding: 16px; }
+  .stat-value { font-size: 30px; }
+  .stat-saved {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    column-gap: 16px;
+    row-gap: 0;
+    align-items: center;
+  }
+  .stat-saved .stat-label { grid-column: 1; grid-row: 1; }
+  .stat-saved .stat-sub   { grid-column: 1; grid-row: 2; }
+  .stat-saved .stat-value {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-size: 34px;
+  }
+
+  /* Most Analyzed Sources: bordered container with row dividers. */
+  #top-sources-list {
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    overflow: hidden;
+  }
+  #top-sources-list .source-row {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+  #top-sources-list .source-row:last-child { border-bottom: none; }
+  #top-sources-list .source-row .h-badge { white-space: nowrap; }
+}
