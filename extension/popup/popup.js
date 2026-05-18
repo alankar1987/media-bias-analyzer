@@ -431,7 +431,18 @@ async function init() {
   }
   if (resp.status === "analyzing") renderLoading(tab, resp.entry?.startedAt);
   else if (resp.status === "done") renderResults(tab, resp.entry.result, resp.entry.analysisId);
-  else if (resp.status === "error") renderError(tab, resp.entry?.error);
+  else if (resp.status === "error") {
+    // Quota errors are user-specific. If the user has since signed out (or
+    // their token expired), the cached quota_exceeded is meaningless — drop
+    // back to idle so they can sign in / retry instead of seeing a stale
+    // "Upgrade to Pro" CTA that doesn't apply.
+    const err = String(resp.entry?.error || "").toLowerCase();
+    if (!_session?.user && err.includes("quota")) {
+      renderIdle(tab);
+    } else {
+      renderError(tab, resp.entry?.error);
+    }
+  }
   else renderIdle(tab);
 }
 
