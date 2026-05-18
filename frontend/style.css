@@ -1633,21 +1633,24 @@ nav {
    .account-grid / .account-sidebar / .profile-card / .stat-grid rules
    so source-order wins at ≤768px) ─────────── */
 @media (max-width: 768px) {
-  /* Collapse the 2-col grid → single column flex flow. */
+  /* Collapse the 2-col grid → single column flex flow.
+     Override align-items from the desktop rule so children stretch full width. */
   .account-grid {
     display: flex !important;
     flex-direction: column;
+    align-items: stretch;
     gap: 16px;
     grid-template-columns: none;
+    width: 100%;
   }
   /* Lift sidebar's children up as direct flex items so we can reorder. */
   .account-sidebar {
     display: contents;
   }
-  .profile-card { order: 1; padding: 24px 20px; text-align: center; }
-  .side-nav     { order: 2; }
-  .account-main { order: 3; }
-  .logout-btn   { order: 4; margin-top: 8px; width: 100%; }
+  .profile-card { order: 1; padding: 24px 20px; text-align: center; width: auto; }
+  .side-nav     { order: 2; width: auto; }
+  .account-main { order: 3; width: auto; }
+  .logout-btn   { order: 4; margin-top: 8px; width: auto; }
 
   .plan-badge { white-space: nowrap; }
 
