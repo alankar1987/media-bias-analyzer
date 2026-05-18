@@ -764,6 +764,33 @@ function initAccountPage() {
 
   const upgradeBtn = document.getElementById('account-upgrade-btn');
   if (upgradeBtn) upgradeBtn.addEventListener('click', startCheckout);
+
+  const portalBtn = document.getElementById('account-portal-btn');
+  if (portalBtn) portalBtn.addEventListener('click', openStripePortal);
+}
+
+async function openStripePortal() {
+  const btn = document.getElementById('account-portal-btn');
+  try {
+    const token = typeof getToken === 'function' ? getToken() : null;
+    if (!token) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
+    const res = await fetch(`${API_BASE}/stripe/portal`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.url) {
+      alert(body.detail || 'Could not open the subscription portal. Please try again.');
+      return;
+    }
+    window.location.href = body.url;
+  } catch (e) {
+    console.error('Stripe portal error:', e);
+    alert('Could not reach the server. Check your connection and try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Manage subscription'; }
+  }
 }
 
 async function loadAccountUsage() {
@@ -811,6 +838,10 @@ async function loadAccountUsage() {
       ? '30 analyses per month. Thank you for supporting Veris!'
       : '3 analyses per month. Upgrade for 30 analyses/month.';
     if (upgradeBtn) upgradeBtn.style.display = isPaid ? 'none' : '';
+    const portalBtn = document.getElementById('account-portal-btn');
+    const refundNote = document.getElementById('account-refund-note');
+    if (portalBtn) portalBtn.style.display = isPaid ? '' : 'none';
+    if (refundNote) refundNote.style.display = isPaid ? '' : 'none';
   } catch (e) {
     console.error('Failed to load usage:', e);
   }

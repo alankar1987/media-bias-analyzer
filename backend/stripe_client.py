@@ -52,6 +52,29 @@ def cancel_subscription(*, user_id: str) -> None:
         logger.error("Failed to cancel Stripe subscription for %s: %s", user_id, exc)
 
 
+def create_portal_session(user_id: str, return_url: str) -> str:
+    """Create a Stripe Billing Portal session and return its URL.
+
+    The portal lets users cancel their subscription, update their card,
+    download invoices, and see their next billing date. Raises if the user
+    has no Stripe customer record (i.e. they never went through checkout).
+    """
+    sub_row = (
+        _supabase.table("subscriptions")
+        .select("stripe_customer")
+        .eq("user_id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    if not sub_row.data or not sub_row.data.get("stripe_customer"):
+        raise ValueError("No Stripe customer for this user")
+    session = stripe.billing_portal.Session.create(
+        customer=sub_row.data["stripe_customer"],
+        return_url=return_url,
+    )
+    return session.url
+
+
 def handle_webhook(payload: bytes, sig_header: str) -> None:
     """Verify and process a Stripe webhook event."""
     secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")

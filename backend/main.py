@@ -276,6 +276,33 @@ async def checkout(authorization: Optional[str] = Header(default=None)):
     return {"url": url}
 
 
+@app.post("/stripe/portal", tags=["billing"])
+async def stripe_portal(authorization: Optional[str] = Header(default=None)):
+    """Return a Stripe Customer Portal URL for the signed-in user.
+
+    The portal lets users cancel their subscription, update their card,
+    and download invoices — UI maintained by Stripe.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = authorization.removeprefix("Bearer ").strip()
+    try:
+        user = verify_jwt(token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    try:
+        url = stripe_client.create_portal_session(
+            user_id=user["id"],
+            return_url="https://veris.news/?managed=1",
+        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="No active subscription")
+    except Exception as exc:
+        logger.error("Stripe portal error: %s", exc)
+        raise HTTPException(status_code=500, detail="Could not create portal session")
+    return {"url": url}
+
+
 @app.post("/stripe/webhook", tags=["billing"])
 async def stripe_webhook(request: Request):
     payload = await request.body()
