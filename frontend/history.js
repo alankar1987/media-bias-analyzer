@@ -59,6 +59,7 @@ async function openHistoryItem(id) {
     const payload = {
       data: row.result_json,
       source_url: row.url,
+      analysis_id: row.id,
     };
     if (typeof showPage === 'function') showPage('home');
     if (typeof renderResults === 'function') renderResults(payload);
